@@ -1,4 +1,19 @@
 #!/usr/bin/env bash
-# Pre-commit: run the local CI mirror. Enable once per clone:
-#   git config core.hooksPath .githooks
+# Pre-commit: regenerate the Codex mirror, require the generated diff to be reviewed/staged,
+# then run the local CI mirror. Enable once per clone with `bun run codex:setup`.
+
+set -u
+root=$(git rev-parse --show-toplevel) || exit 1
+cd "$root" || exit 1
+
+if command -v bun >/dev/null 2>&1; then
+  bun run --silent sync-codex || exit 1
+  if ! git diff --quiet -- AGENTS.md .codex .agents; then
+    printf '%s\n' \
+      "pre-commit: regenerated Codex harness files changed." \
+      "Review and stage AGENTS.md/.codex/.agents, then commit again." >&2
+    exit 1
+  fi
+fi
+
 exec bash "$(git rev-parse --show-toplevel)/scripts/validate.sh"

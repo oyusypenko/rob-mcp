@@ -28,14 +28,21 @@ Read first: `CLAUDE.md`, `.claude/rules/no-custody.md` (the death line), `.claud
 2. **Trading policy (`src/trading/policy.ts`).** Try to defeat every guard: per-order and daily USD
    caps (accumulation across sessions? float tricks? unit confusion UI-vs-raw with
    `uiMultiplier`?), ticker allowlist bypass, market-hours gate, the prepared-order-id discipline
-   (can `trade_execute` be reached with an unprepared/replayed/mutated order?), dry-run bypass.
+   (can `trade_execute` be reached with an unprepared/replayed/mutated order?), dry-run bypass,
+   and any mismatch between the canonical `position_check`/`trade_prepare`/`trade_execute` wrapper
+   contract and O-9's verified upstream mapping.
 3. **Payment path.** Free-tier limiter before paywall: IP-spoofing via XFF trust, limiter-store
-   exhaustion, paid handler reachable without a verified settlement, replayed `X-PAYMENT` headers,
+   exhaustion, paid handler reachable without a verified settlement, replayed
+   `PAYMENT-SIGNATURE` headers, missing/malformed `PAYMENT-REQUIRED` or `PAYMENT-RESPONSE`,
    price/network mismatch between the PRICING map and what the middleware actually enforces,
-   facilitator-down behavior (fail open or closed?).
+   facilitator-down behavior (fail open or closed?), and D-24 facilitator/header drift. Verify
+   D-22: no generic forwarding header is trusted, full identity/replay stores fail closed, expired
+   entries are the only forgettable evidence, and oversized bodies die before parse/payment work.
 4. **Paid-tool input surface.** Zod schemas as the only gate: ticker/address confusion, unbounded
    `sinceHours`/`amountUsd` driving expensive RPC fan-out (paid-for-DoS), SQL injection into the
-   whale store, log-scan range abuse, response-size blowups.
+   whale store, log-scan range abuse, response-size blowups. Verify the D-18 config actually caps
+   quote USD, whale lookback/results, and the liquidity probe; verify event-level amountUsd
+   provenance and persisted timestamps cannot be omitted.
 5. **Data integrity as a product risk.** A paid signal that lies is a liability: stale-oracle and
    sequencer-down handling, premium math sign errors, `uiMultiplier` double-application,
    mint/redeem misclassification — verify the tests actually pin these.

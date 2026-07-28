@@ -19,6 +19,8 @@
     "format:check": "prettier --check .",
     "verify-tokens": "bun scripts/verify-tokens.ts",
     "sync-codex": "bun scripts/sync-codex.ts",
+    "codex:parity": "bun scripts/verify-codex-parity.ts",
+    "codex:setup": "bun scripts/setup-codex.ts",
     "site:data": "bun scripts/site-generate.ts",
     "site:dev": "bun run site:data && astro dev --root site",
     "site:build": "bun run site:data && astro build --root site",

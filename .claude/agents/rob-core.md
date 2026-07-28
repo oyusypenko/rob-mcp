@@ -36,23 +36,40 @@ implement), and the decisions log. The docs win over code.
 3. **Config fails closed.** Zod-parsed env via `loadConfig(env)`; startup aborts on missing/invalid
    vars; every enabled chain's `RPC_URL_<chainId>` asserted against live `eth_chainId` at boot.
    Env additions land in `config.ts` AND `.env.example` AND
-   `docs/developers/runbooks/env-inventory.md` in the same change.
+   `docs/developers/runbooks/env-inventory.md` in the same change. Enforce D-18's configured
+   `MAX_QUOTE_USD`, `MAX_WHALE_SINCE_HOURS`, `MAX_WHALE_RESULTS`, `LIQUIDITY_CLIP_USD`, and
+   `ROBINHOOD_QUOTE_MAX_AGE_SECONDS`; these limits may not hide as handler constants.
 4. **Provenance on every number** (`no-market-metrics` rule): every price-bearing output carries
-   `oracleSource`, timestamp, and the pool/feed address it came from. Oracle reads gate on
-   staleness AND the L2 sequencer-uptime feed. No hardcoded prices/thresholds — env or live reads.
+   `oracleSource`, timestamp, and the pool/feed address or off-chain provider it came from. Oracle reads gate on
+   staleness AND the L2 sequencer-uptime feed. Chain 4663 has no official uptime feed as of
+   2026-07-29: represent it as absent and fail live price-bearing operations closed with
+   `SEQUENCER_STATUS_UNAVAILABLE` (D-13/O-8), never invent an address or treat RPC reachability as
+   sequencer health. `oraclePaused` is internal and fail-closed; successful price results expose
+   `oraclePaused: false` and `sequencerOk: true` (D-20). No hardcoded prices/thresholds — env or
+   live reads.
 5. **Registry is curated + verified — and chain-agnostic (D-8).** Token entries live in per-chain
    files (`data/tokens/<chainId>.json`), chains + venues + issuer profiles in `data/chains.json`;
    entries are added by script (`seed-tokens.ts`) and MUST pass `verify-tokens.ts` (on-chain
-   symbol/decimals/profile fields + feed sanity) before commit. Issuer semantics (e.g. Robinhood's
+   symbol/decimals/profile fields + feed sanity) before commit. For 4663, seed from Robinhood's
+   official on-chain asset registry/`/rhj/assets`, then enrich from official Chainlink and verified
+   venue sources (D-11); runtime reads the checked-in snapshot. Issuer semantics (e.g. Robinhood's
    ERC-8056 `uiMultiplier`, whose Chainlink feed already includes the multiplier — never re-apply
-   it) live in issuer profiles, never in `src/core/` or `src/tools/`. No chain id, venue address,
-   or issuer assumption in core code — every tool takes optional `chain`, every output carries
-   `chainId`.
+   it) live in issuer profiles, never in `src/core/` or `src/tools/`. Feedless 4663 assets use
+   Robinhood `/rhj/prices` plus `/rhj/assets.currentMultiplier` behind the fallback port (D-12).
+   Quote assets + USD feeds are chain-registry data; for 4663 use D-19's verified USDG facts.
+   Discover v2/v3 pools through configured factories/fee tiers and verify returned contracts;
+   empty liquidity is valid, invented pool metadata is not.
+   The 4663 participant set includes D-21's verified ForwarderV4 proxy; zero-address classification
+   still takes precedence over participant flow.
+   No chain id, venue address, or issuer assumption in core code — every tool takes optional
+   `chain`, every output carries `chainId`.
 6. **Scanner discipline.** Whale scans are chunked `eth_getLogs` with adaptive range splitting, a
    persistent resume cursor, and a reorg tail re-scan; classification is pure (`from==0x0`→mint,
    `to==0x0`→redeem, configured issuer set→AP flow, else threshold from `WHALE_MIN_USD`). SQLite
    via `bun:sqlite` behind the `WhaleStore` port — Postgres must remain a swap, not a rewrite.
-   Guard the `bun:sqlite` import so stdio mode runs on plain Node.
+   Guard the `bun:sqlite` import so stdio mode runs on plain Node. Scanner chunk/reorg/poll tuning
+   comes from each chain registry entry. Persist block timestamp and per-event oracle provenance;
+   stored/filter/output kinds are exactly `transfer|mint|redeem|ap-flow|whale` (D-18).
 7. **No signing.** No wallet client, no private key handling in `src/` — ever (`no-custody` rule;
    enforced by hook). This service reads.
 8. **Unverified venues stay out.** Only Uniswap v2/v3 adapters until other venues are verified

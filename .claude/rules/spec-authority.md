@@ -14,3 +14,7 @@
   external library docs (flag the conflict).
 - Never create plans/trackers/status/progress md files anywhere. Phase state lives in git history
   and the decisions log; docs are design + runbooks only.
+- Harness changes are source-first: when creating or editing an agent, skill, rule, hook, MCP
+  config, or other harness-related Markdown/config asset, edit only `CLAUDE.md`, `.claude/**`, or
+  `.mcp.json`, then run `bun run sync-codex`. Never directly create or edit generated `AGENTS.md`,
+  `.codex/**`, or `.agents/**`; `bun run validate` must prove the regenerated mirror is current.

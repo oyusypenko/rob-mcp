@@ -1,0 +1,9 @@
+{
+  "generatedBy": "scripts/sync-codex.ts",
+  "supportedCodexVersion": "0.144.6",
+  "sourceFiles": [
+    "CLAUDE.md",
+    ".claude/**",
+    ".mcp.json"
+  ]
+}

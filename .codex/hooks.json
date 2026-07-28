@@ -11,6 +11,16 @@
             "statusMessage": "rob-mcp: secret/destructive-command guard"
           }
         ]
+      },
+      {
+        "matcher": "(?i)^(apply_patch|write|edit|multiedit|edit_file|create_file)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'cd \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\" && exec ./.claude/hooks/protect-generated.sh'",
+            "statusMessage": "rob-mcp: generated harness guard"
+          }
+        ]
       }
     ],
     "PostToolUse": [

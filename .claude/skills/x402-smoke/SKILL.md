@@ -3,11 +3,11 @@ name: x402-smoke
 description: >-
   Runbook-skill for the end-to-end x402 payment smoke test on Base Sepolia (eip155:84532): boots
   the server in serve mode against the testnet facilitator, exercises a paid route with
-  @x402/fetch (402 challenge → EIP-3009 signature → X-PAYMENT retry → verified response) and a
-  paid MCP tool via the paid-MCP client. Use when the user says "x402 smoke", "test payments",
-  "does the paywall work", before any deploy, and after ANY change to src/http/x402.ts,
-  src/pricing.ts, src/mcp/http.ts, or an @x402/* version bump. Testnet-only; uses a throwaway
-  funded test wallet — never a real key.
+  @x402/fetch (PAYMENT-REQUIRED challenge → EIP-3009 signature → PAYMENT-SIGNATURE retry →
+  PAYMENT-RESPONSE) and a paid MCP tool via the paid-MCP client. Use when the user says "x402
+  smoke", "test payments", "does the paywall work", before any deploy, and after ANY change to
+  src/http/x402.ts, src/pricing.ts, src/mcp/http.ts, or an @x402/* version bump. Testnet-only;
+  uses a throwaway funded test wallet — never a real key.
 ---
 
 # x402 end-to-end smoke test (Base Sepolia)
@@ -25,7 +25,8 @@ that IS the finding — flag before "fixing" the test.
 
 ## Invariants this skill will not violate
 
-- **Testnet only.** `X402_NETWORK=eip155:84532`, facilitator `https://facilitator.x402.org`.
+- **Testnet only.** `X402_NETWORK=eip155:84532`, facilitator `https://x402.org/facilitator`
+  (D-24).
   Never point this at `eip155:8453` mainnet or CDP credentials.
 - **Throwaway wallet only.** The paying key is a dedicated Base Sepolia test wallet (testnet USDC
   from the Circle faucet), stored in the local untracked `.env` as `SMOKE_TEST_PRIVATE_KEY`.
@@ -40,12 +41,14 @@ that IS the finding — flag before "fixing" the test.
    gas from the payer; facilitator settles).
 2. Boot: `bun run serve` (or against a deployed URL). `curl /healthz` → 200 with facilitator
    reachable.
-3. Challenge shape: `curl -i` a paid route → **402** with an `accepts` body matching PRICING
-   (scheme `exact`, network `eip155:84532`, correct price + `payTo`). Free tier: first
-   `FREE_CALLS_PER_DAY` calls from a fresh IP return 200 WITHOUT payment; the 402 appears after.
+3. Challenge shape: `curl -i -X POST` a paid
+   `/api/v1/tools/<tool-name>` route with its JSON body → **402** with `PAYMENT-REQUIRED`
+   carrying `accepts` that matches PRICING (scheme `exact`, network `eip155:84532`, correct price +
+   `payTo`). Free tier: first `FREE_CALLS_PER_DAY` calls from a fresh IP return 200 WITHOUT
+   payment; the 402 appears after.
 4. Paid HTTP round-trip: `bun scripts/x402-smoke.ts http` — wraps fetch with the x402 client,
-   asserts: 402 → auto-payment → 200 + payment-response header, and the JSON payload validates
-   against the tool's output schema.
+   asserts: 402 → `PAYMENT-SIGNATURE` retry → 200 + `PAYMENT-RESPONSE`, and the JSON payload
+   validates against the tool's output schema.
 5. Paid MCP round-trip: `bun scripts/x402-smoke.ts mcp` — connects the paid-MCP client to `/mcp`,
    calls one paid tool end-to-end, asserts a paid result (not a 402-in-result).
 6. Verify settlement: the USDC transfer to `X402_PAY_TO` visible on Base Sepolia (sepolia.basescan

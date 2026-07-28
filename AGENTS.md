@@ -26,7 +26,8 @@ profiles + per-chain token registries), never assumptions in core code — Robin
 the first and default enabled chain; scope is EVM-only (viem). Pure data services (stock-token
 premium vs Chainlink oracle, cross-DEX liquidity/spreads, whale + mint/redeem flow) behind ports,
 exposed as:
-(a) a **Hono JSON API** paywalled per-call with x402 (USDC on Base) — what x402 Bazaar lists;
+(a) a **Hono JSON API** (`POST /api/v1/tools/<tool-name>`) paywalled per-call with x402 (USDC on
+Base) — what x402 Bazaar lists;
 (b) an **MCP server** — free local stdio (`bunx rob-mcp`, BYO-RPC) and hosted Streamable HTTP with
 x402-paid tools. Plus a **local-only** trading wrapper around the user's own Robinhood Trading MCP.
 `src/tools/definitions.ts` is the single source of truth feeding both surfaces; the one `PRICING`
@@ -43,6 +44,7 @@ map drives both paywalls. Full design: `docs/developers/architecture.md`; tool c
 | `src/trading/`                                              | LOCAL-ONLY guarded wrapper over the user's Robinhood Trading MCP                                  | rob-surface (policy review: rob-security) |
 | `src/{cli,index,config,logger,health,deps}.ts`              | Entry points, fail-closed Zod config, JSON logger, health, DI container                           | rob-core                                  |
 | `scripts/`, `data/`                                         | validate.sh, registry seed/verify, chain registry + per-chain token registries                    | rob-core                                  |
+| `site/`, site build/Pages workflow                          | Derived static marketing/docs; canonical facts remain in product code + developer docs            | rob-surface (content: rob-architect)      |
 | `docs/developers/`                                          | Design docs + decisions log + runbooks — the authority                                            | rob-architect                             |
 | `AGENTS.md`, `.codex/`, `.agents/`                          | GENERATED Codex mirror of `.claude/**` (D-9) — never hand-edit; run `bun run sync-codex`          | rob-architect                             |
 
@@ -53,7 +55,8 @@ flow, secrets; it refutes, never fixes).
 Architecture discipline (from the keeper/api patterns this repo is modeled on): pure core first with
 a fake-backed `bun test` (injected clock, scripted fakes in `test/fakes.ts`), adapters second; all
 handlers take `Deps` (DI container in `src/deps.ts`); config fails closed (Zod; every enabled
-chain's RPC asserted against live `eth_chainId` at boot).
+chain's RPC asserted against live `eth_chainId` at boot; D-18's quote/whale/liquidity/fallback
+bounds and D-22's proxy/body/security-store caps are explicit env config).
 
 ## Golden commands
 
@@ -61,6 +64,8 @@ chain's RPC asserted against live `eth_chainId` at boot).
   codex-mirror drift → typecheck → tests). One-time setup: `git config core.hooksPath .githooks`.
 - `bun run sync-codex` — regenerate the Codex mirror after ANY edit under `.claude/**` or
   `.mcp.json` (`--check` is the validate stage). Runbook: `docs/developers/runbooks/codex-parity.md`.
+- `bun run codex:setup` — one-time per-clone Codex bootstrap (regenerate, install Git hook path,
+  run behavioral parity checks); `bun run codex:parity` re-runs the read-only verifier.
 - `bun test` · `bun run typecheck` · `bun run format`
 - `bun run verify-tokens` — on-chain verification of the per-chain token registries (`/verify-tokens` skill)
 - `bun run dev` (stdio MCP) · `bun run serve` (hosted HTTP) · `bun run scan` (whale backfill)
@@ -74,22 +79,33 @@ Chain-specific facts below describe the FIRST chain; canonical per-chain values 
   single FCFS sequencer. Explorer: robinhoodchain.blockscout.com.
 - **Stock Tokens (4663 issuer profile)**: ERC-20 (18 dec) + ERC-8056 extension (`uiMultiplier()`,
   `balanceOfUI()`); mint/burn restricted to KYB'd Authorized Participants — zero-address/issuer
-  transfers classify as mint/redeem. No public on-chain registry → curated
-  `data/tokens/4663.json`, verified on-chain. Other issuers (Backed xStocks, Dinari dShares on
-  other EVM chains) get their own issuer profiles when added.
+  transfers classify as mint/redeem. Robinhood's live on-chain asset registry and official
+  `/rhj/assets` API seed the checked-in `data/tokens/4663.json` snapshot, which remains gated by
+  on-chain verification (D-11). Other issuers (Backed xStocks, Dinari dShares on other EVM chains)
+  get their own issuer profiles and source adapters when added. The verified 4663 ForwarderV4
+  proxy `0xcfAEce2151502dA2a21d47234ae1f08618A60A94` is an issuer participant (D-21);
+  zero-address classification still takes precedence.
 - **Oracle**: official Chainlink tokenized-equity feeds on 4663 (`AggregatorV3Interface`, 8-dec USD,
   24/5); feed price already includes `uiMultiplier` → directly comparable to DEX price. Always gate
-  on staleness + the L2 sequencer-uptime feed.
+  on staleness + the L2 sequencer-uptime feed. No official uptime feed exists for 4663 as of
+  2026-07-29, so live price-bearing operations fail closed until O-8 resolves (D-13); feedless
+  assets use Robinhood `/rhj/prices` with `/rhj/assets.currentMultiplier` only after that gate.
+  Successful outputs expose `oraclePaused: false` + `sequencerOk: true` (D-20).
 - **DEX addresses (4663)** — Uniswap v3: Factory `0x1f7d7550B1b028f7571E69A784071F0205FD2EfA`,
   QuoterV2 `0x33e885ed0ec9bf04ecfb19341582aadcb4c8a9e7`, SwapRouter02
   `0xcaf681a66d020601342297493863e78c959e5cb2`; Uniswap v2: Factory
   `0x8bceaa40b9acdfaedf85adf4ff01f5ad6517937f`; WETH `0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73`.
+  Canonical quote asset: USDG `0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168` (6 dec), priced by
+  USDG/USD feed `0x61B7e5650328764B076A108EFF5fa7282a1B9aD2` (8 dec,
+  `heartbeatSeconds=86400` from official RDD metadata); pools are factory-discovered and verified,
+  never invented (D-19).
   Other venues (Arcus/Pleiades/Rialto/Lighter) are UNVERIFIED on-chain — open item O-1 in the
   decisions log; verify on Blockscout before writing an adapter.
 - **x402**: CAIP-2 networks — `eip155:8453` (Base mainnet, USDC settlement) / `eip155:84532`
-  (Base Sepolia, testnet facilitator `https://facilitator.x402.org`); mainnet uses the Coinbase CDP
-  facilitator with `@coinbase/x402` auth. Flow: 402 challenge → client signs EIP-3009
-  `transferWithAuthorization` → `X-PAYMENT` retry → facilitator verify/settle.
+  (Base Sepolia, testnet facilitator `https://x402.org/facilitator`); mainnet uses the Coinbase CDP
+  facilitator with `@coinbase/x402` auth. v2 flow (D-24): `PAYMENT-REQUIRED` challenge → client
+  signs EIP-3009 `transferWithAuthorization` → `PAYMENT-SIGNATURE` retry → facilitator
+  verify/settle → `PAYMENT-RESPONSE`.
 - **Robinhood Agentic Trading**: official Trading MCP, per-user connector URL, ring-fenced Agentic
   Account. Our wrapper composes the USER's connection, locally, only.
 
@@ -97,18 +113,19 @@ Chain-specific facts below describe the FIRST chain; canonical per-chain values 
 
 - **context7** — current library docs (the docs-first rule). The MCP SDK and x402 lines move fast;
   re-verify APIs there before every implementation session. Secrets never go in `.mcp.json`.
-- Mirrored to `[mcp_servers.context7]` in `.codex/config.toml` by `sync-codex`. Under Codex the
-  endpoint requires a one-time OAuth login (`codex mcp login context7`); Claude Code uses it
-  anonymously.
+- Mirrored to `[mcp_servers.context7]` in `.codex/config.toml` by `sync-codex`. Codex reads the
+  optional `CONTEXT7_API_KEY` through an environment-backed header for higher provider limits;
+  Claude Code and Codex can otherwise use the endpoint anonymously until its quota is exhausted.
 
 ---
 
 ## Always-on rules (inlined for Codex)
 
-In Claude Code these four load automatically from `.claude/rules/`. **Codex does not support
-`@`-imports or file references in AGENTS.md**, so they are inlined here verbatim. They are not
-advisory: violating one is a bug. The source of truth remains `.claude/rules/**` — edit there,
-then run `bun run sync-codex`.
+In Claude Code these four load automatically from `.claude/rules/`. Codex can follow ordinary
+file references, but it does not eagerly assemble Claude's `@path` imports or auto-load that
+rules directory, so always-on rules are inlined here verbatim. They are not advisory: violating
+one is a bug. The source of truth remains `.claude/rules/**` — edit there, then run
+`bun run sync-codex`.
 
 ### Rule: `spec-authority` — Authority chain & docs-first (always loaded)
 
@@ -128,6 +145,10 @@ _Source: `.claude/rules/spec-authority.md` (verbatim)._
   external library docs (flag the conflict).
 - Never create plans/trackers/status/progress md files anywhere. Phase state lives in git history
   and the decisions log; docs are design + runbooks only.
+- Harness changes are source-first: when creating or editing an agent, skill, rule, hook, MCP
+  config, or other harness-related Markdown/config asset, edit only `CLAUDE.md`, `.claude/**`, or
+  `.mcp.json`, then run `bun run sync-codex`. Never directly create or edit generated `AGENTS.md`,
+  `.codex/**`, or `.agents/**`; `bun run validate` must prove the regenerated mirror is current.
 
 ### Rule: `no-custody` — No custody, ever (always loaded)
 
@@ -200,6 +221,8 @@ hand-edited; everything in the Codex column is generated by `scripts/sync-codex.
 | Skills       | `.claude/skills/*/`       | `.agents/skills/*`     | **symlink** — one copy on disk           |
 | Hooks        | `.claude/hooks/*.sh`      | `.codex/hooks.json`    | **same scripts**, Codex tool matchers    |
 | MCP          | `.mcp.json`               | `.codex/config.toml`   | `[mcp_servers.<name>]`                   |
+| Permissions  | `.claude/settings.json`   | `.codex/config.toml`   | filesystem permission profile           |
+| Shell policy | `.claude/settings.json`   | `.codex/rules/*.rules` | exec-policy prefixes                     |
 
 Codex-specific notes: hooks require one-time trust (`/hooks` in the TUI, or
 `--dangerously-bypass-hook-trust` in CI), and project-scoped `.codex/` config loads only for a

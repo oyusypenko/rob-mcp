@@ -50,10 +50,19 @@ else
   skip "bun not installed"
 fi
 
+stage "codex behavioral parity"
+if ! command -v bun >/dev/null 2>&1; then
+  skip "bun not installed"
+elif ! command -v codex >/dev/null 2>&1; then
+  skip "codex not installed"
+else
+  bun run --silent codex:parity || fail=1
+fi
+
 stage "typecheck (tsc --noEmit)"
 if ! command -v bun >/dev/null 2>&1; then
   skip "bun not installed"
-elif ! ls src/*.ts src/**/*.ts scripts/*.ts test/*.ts >/dev/null 2>&1; then
+elif ! find src scripts test -type f -name '*.ts' -print -quit 2>/dev/null | grep -q .; then
   skip "no TypeScript source yet (pre-Phase-B scaffold)"
 else
   bun run --silent typecheck || fail=1
@@ -62,7 +71,7 @@ fi
 stage "tests (bun test)"
 if ! command -v bun >/dev/null 2>&1; then
   skip "bun not installed"
-elif ! ls test/*.test.ts src/**/*.test.ts >/dev/null 2>&1; then
+elif ! find test src -type f -name '*.test.ts' -print -quit 2>/dev/null | grep -q .; then
   skip "no tests yet (pre-Phase-B scaffold)"
 else
   bun test || fail=1

@@ -15,6 +15,8 @@
       "Bash(bun run validate*)",
       "Bash(bun run format*)",
       "Bash(bun run verify-tokens*)",
+      "Bash(bun run sync-codex*)",
+      "Bash(bun run codex:parity*)",
       "Bash(bun install)",
       "Bash(git status*)",
       "Bash(git diff*)",
@@ -30,6 +32,15 @@
           {
             "type": "command",
             "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/protect-secrets.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/protect-generated.sh"
           }
         ]
       }
