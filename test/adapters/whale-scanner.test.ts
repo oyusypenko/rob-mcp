@@ -63,6 +63,24 @@ describe("whale scanner", () => {
     expect(source.calls).toContainEqual([1n, 2n]);
   });
 
+  test("does not multiply non-range provider failures", async () => {
+    const source = new SplittingSource();
+    source.getTransferLogs = async (input) => {
+      source.calls.push([input.fromBlock, input.toBlock]);
+      throw new Error("upstream unavailable");
+    };
+
+    await expect(
+      fetchLogsAdaptive(source, {
+        chainId: 1,
+        token,
+        fromBlock: 1n,
+        toBlock: 8n,
+      }),
+    ).rejects.toThrow("upstream unavailable");
+    expect(source.calls).toEqual([[1n, 8n]]);
+  });
+
   test("replaces the reorg tail and persists the resume cursor atomically", async () => {
     const source = new SplittingSource();
     const store = new InMemoryWhaleStore();
@@ -95,5 +113,39 @@ describe("whale scanner", () => {
     expect(result.throughBlock).toBe(8n);
     expect(await store.getCursor(1, token)).toBe(8n);
     expect(store.events.every((event) => event.amountUsd === 125)).toBe(true);
+  });
+
+  test("persists completed chunks before continuing the bounded range", async () => {
+    const source = new SplittingSource();
+    const store = new InMemoryWhaleStore();
+
+    await scanTokenRange({
+      chainId: 1,
+      token: {
+        ticker: "TEST",
+        name: "Test",
+        address: token,
+        decimals: 18,
+        issuerProfile: "issuer",
+        venues: [],
+      },
+      issuerProfile: {
+        mintRedeem: { zeroAddress: true, participantAddresses: [] },
+      },
+      source,
+      store,
+      pricer,
+      whaleMinUsd: 100,
+      initialChunkBlocks: 2n,
+      initialBlock: 1n,
+      throughBlock: 4n,
+      reorgTailBlocks: 2n,
+    });
+
+    expect(await store.getCursor(1, token)).toBe(4n);
+    expect(source.calls).toEqual([
+      [1n, 2n],
+      [3n, 4n],
+    ]);
   });
 });

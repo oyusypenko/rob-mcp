@@ -96,6 +96,13 @@ export const uniswapV2PairAbi = [
   {
     type: "function",
     stateMutability: "view",
+    name: "factory",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
+  },
+  {
+    type: "function",
+    stateMutability: "view",
     name: "token0",
     inputs: [],
     outputs: [{ name: "", type: "address" }],
@@ -135,6 +142,13 @@ export const uniswapV3FactoryAbi = [
 ] as const;
 
 export const uniswapV3PoolAbi = [
+  {
+    type: "function",
+    stateMutability: "view",
+    name: "factory",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
+  },
   {
     type: "function",
     stateMutability: "view",

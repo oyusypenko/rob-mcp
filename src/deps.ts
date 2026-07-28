@@ -4,11 +4,13 @@ import { DexRegistry } from "./adapters/dex-registry";
 import { RegistryDexPoolCatalog } from "./adapters/dex-pools";
 import { OracleRouter } from "./adapters/oracle-router";
 import { RobinhoodFallbackOracleAdapter } from "./adapters/robinhood-fallback";
+import { createWhaleScannerRuntime, type WhaleScannerRuntime } from "./adapters/scanner-runtime";
 import { createSqliteWhaleStore } from "./adapters/sqlite-whale-store";
 import { UniswapV2Adapter, ViemUniswapV2Reader } from "./adapters/uniswap-v2";
 import { UniswapV3Adapter, ViemUniswapV3Reader } from "./adapters/uniswap-v3";
 import type { Config } from "./config";
 import type { DexRegistryPort, OraclePort, WhaleStore } from "./core/ports";
+import { createLogger } from "./logger";
 import { loadChainRegistry, type ChainRegistry } from "./registry/chains";
 import { loadTokenRegistry, type TokenRegistry } from "./registry/tokens";
 
@@ -20,6 +22,7 @@ export interface Deps {
   readonly oracle: OraclePort;
   readonly dex: DexRegistryPort;
   readonly whaleStore?: WhaleStore;
+  readonly scanner?: WhaleScannerRuntime;
   readonly now: () => Date;
 }
 
@@ -31,6 +34,7 @@ export interface CreateDepsOptions {
   readonly oracle?: OraclePort;
   readonly dex?: DexRegistryPort;
   readonly whaleStore?: WhaleStore;
+  readonly scanner?: WhaleScannerRuntime;
   readonly now?: () => Date;
 }
 
@@ -100,6 +104,22 @@ export async function createDeps(config: Config, options: CreateDepsOptions = {}
   const whaleStore =
     options.whaleStore ??
     (config.mode === "stdio" ? undefined : await createSqliteWhaleStore(config.sqlitePath));
+  const scanner =
+    options.scanner ??
+    (config.mode !== "stdio" && whaleStore
+      ? await createWhaleScannerRuntime({
+          config,
+          chainRegistry,
+          tokenRegistry,
+          clients,
+          store: whaleStore,
+          pricerOracle: oracle,
+          logger: createLogger(config.logLevel),
+          clientFactory,
+          verifyRpcChainIds: options.verifyRpcChainIds,
+          now,
+        })
+      : undefined);
 
   return {
     config,
@@ -109,6 +129,7 @@ export async function createDeps(config: Config, options: CreateDepsOptions = {}
     oracle,
     dex,
     ...(whaleStore ? { whaleStore } : {}),
+    ...(scanner ? { scanner } : {}),
     now,
   };
 }

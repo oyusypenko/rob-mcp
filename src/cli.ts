@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url";
 
 import { loadConfig, type RuntimeMode } from "./config.js";
 import { createDeps } from "./deps.js";
+import type { HostedServer } from "./http/start.js";
 import { runStdioMcp } from "./mcp/stdio.js";
 
 function modeFromArgs(args: readonly string[]): RuntimeMode | "trade" {
@@ -24,12 +25,32 @@ export async function main(
       "Trading wrapper exposure is blocked until O-9 verifies the upstream Robinhood MCP contract",
     );
   }
-  if (mode === "scan") {
-    throw new Error("Whale scanner is not available in the current core implementation");
-  }
 
   const config = loadConfig(env, mode);
   const deps = await createDeps(config);
+
+  if (mode === "scan") {
+    const scanner = deps.scanner;
+    if (!scanner) {
+      throw new Error("Whale scanner failed to initialize");
+    }
+    let stopping = false;
+    const shutdown = () => {
+      if (stopping) return;
+      stopping = true;
+      void scanner.stop();
+    };
+    process.once("SIGINT", shutdown);
+    process.once("SIGTERM", shutdown);
+    try {
+      await scanner.backfill();
+    } finally {
+      process.off("SIGINT", shutdown);
+      process.off("SIGTERM", shutdown);
+      await scanner.close();
+    }
+    return;
+  }
 
   if (mode === "stdio") {
     const server = await runStdioMcp(deps);
@@ -41,10 +62,39 @@ export async function main(
     return;
   }
 
+  const scanner = deps.scanner;
+  if (!scanner) {
+    throw new Error("Whale scanner failed to initialize");
+  }
+  scanner.startFollowing();
   const { startHostedServer } = await import("./http/start.js");
-  const server = await startHostedServer(deps);
+  let server: HostedServer;
+  try {
+    server = await startHostedServer(deps);
+  } catch (error) {
+    await scanner.close();
+    throw error;
+  }
+  let stopping = false;
   const shutdown = () => {
-    void server.stop().finally(() => process.exit(0));
+    if (stopping) return;
+    stopping = true;
+    void (async () => {
+      try {
+        await server.stop();
+        await scanner.close();
+        process.exit(0);
+      } catch (error) {
+        console.error(
+          JSON.stringify({
+            level: "error",
+            event: "shutdown_failed",
+            error: error instanceof Error ? error.message : "unknown error",
+          }),
+        );
+        process.exit(1);
+      }
+    })();
   };
   process.once("SIGINT", shutdown);
   process.once("SIGTERM", shutdown);

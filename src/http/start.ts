@@ -36,16 +36,21 @@ export async function startHostedServer(deps: Deps): Promise<HostedServer> {
       getHealth(deps),
       payment.facilitatorReachable(),
     ]);
-    const scanner = {
-      available: false,
+    const scanner = deps.scanner?.snapshot() ?? {
+      available: false as const,
+      running: false,
       lagBlocks: null,
+      chains: [],
     };
+    const scannerFailed =
+      scanner.available && scanner.chains.some((chain) => chain.status === "error");
     return {
-      status: !facilitatorReachable
-        ? "stale"
-        : coreHealth.status === "degraded"
-          ? "degraded"
-          : "ok",
+      status:
+        !facilitatorReachable || scannerFailed
+          ? "stale"
+          : coreHealth.status === "degraded"
+            ? "degraded"
+            : "ok",
       chains: coreHealth.chains,
       scanner,
       facilitator: { reachable: facilitatorReachable },

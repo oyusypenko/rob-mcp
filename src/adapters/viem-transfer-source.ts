@@ -12,6 +12,11 @@ export class ViemTransferLogSource implements TransferLogSource {
     return this.client(chainId).getBlockNumber();
   }
 
+  async getBlockTimestamp(chainId: number, blockNumber: bigint): Promise<Date> {
+    const block = await this.client(chainId).getBlock({ blockNumber });
+    return new Date(Number(block.timestamp) * 1_000);
+  }
+
   async getTransferLogs(input: {
     chainId: number;
     token: string;
@@ -30,8 +35,8 @@ export class ViemTransferLogSource implements TransferLogSource {
     const timestamps = new Map(
       await Promise.all(
         uniqueBlocks.map(async (blockNumber) => {
-          const block = await client.getBlock({ blockNumber });
-          return [blockNumber, new Date(Number(block.timestamp) * 1_000).toISOString()] as const;
+          const timestamp = await this.getBlockTimestamp(input.chainId, blockNumber);
+          return [blockNumber, timestamp.toISOString()] as const;
         }),
       ),
     );

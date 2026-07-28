@@ -15,8 +15,10 @@ export async function fetchLogsAdaptive(
     readonly token: string;
     readonly fromBlock: bigint;
     readonly toBlock: bigint;
+    readonly signal?: AbortSignal;
   },
 ): Promise<DecodedTransferLog[]> {
+  input.signal?.throwIfAborted();
   if (input.fromBlock > input.toBlock) {
     return [];
   }
@@ -30,17 +32,19 @@ export async function fetchLogsAdaptive(
       })),
     ];
   } catch (error) {
-    if (input.fromBlock === input.toBlock) {
+    if (
+      input.fromBlock === input.toBlock ||
+      !isProviderRangeLimitError(error) ||
+      input.signal?.aborted
+    ) {
       throw error;
     }
     const midpoint = (input.fromBlock + input.toBlock) / 2n;
-    const [left, right] = await Promise.all([
-      fetchLogsAdaptive(source, { ...input, toBlock: midpoint }),
-      fetchLogsAdaptive(source, {
-        ...input,
-        fromBlock: midpoint + 1n,
-      }),
-    ]);
+    const left = await fetchLogsAdaptive(source, { ...input, toBlock: midpoint });
+    const right = await fetchLogsAdaptive(source, {
+      ...input,
+      fromBlock: midpoint + 1n,
+    });
     return [...left, ...right];
   }
 }
@@ -57,6 +61,7 @@ export async function scanTokenRange(input: {
   readonly initialBlock: bigint;
   readonly throughBlock: bigint;
   readonly reorgTailBlocks: bigint;
+  readonly signal?: AbortSignal;
 }): Promise<{
   readonly fromBlock: bigint;
   readonly throughBlock: bigint;
@@ -74,65 +79,102 @@ export async function scanTokenRange(input: {
     return { fromBlock, throughBlock: input.throughBlock, events: 0 };
   }
 
-  const logs: DecodedTransferLog[] = [];
+  let eventCount = 0;
   for (
     let chunkFrom = fromBlock;
     chunkFrom <= input.throughBlock;
     chunkFrom += input.initialChunkBlocks
   ) {
+    input.signal?.throwIfAborted();
     const chunkTo = minBigInt(input.throughBlock, chunkFrom + input.initialChunkBlocks - 1n);
-    logs.push(
-      ...(await fetchLogsAdaptive(input.source, {
-        chainId: input.chainId,
-        token: input.token.address,
-        fromBlock: chunkFrom,
-        toBlock: chunkTo,
-      })),
-    );
-  }
-  const events: WhaleEvent[] = [];
-
-  for (const log of logs) {
-    const amount = formatTokenAmount(log.amount, input.token.decimals);
-    const priced = await input.pricer.price({
+    const logs = await fetchLogsAdaptive(input.source, {
       chainId: input.chainId,
-      ticker: input.token.ticker,
-      tokenAddress: input.token.address,
-      tokenAmount: amount,
-    });
-    events.push({
-      chainId: input.chainId,
-      txHash: log.txHash,
-      block: log.block,
-      logIndex: log.logIndex,
-      time: log.time,
       token: input.token.address,
-      kind: classifyTransfer({
+      fromBlock: chunkFrom,
+      toBlock: chunkTo,
+      signal: input.signal,
+    });
+    const events: WhaleEvent[] = [];
+
+    for (const log of logs) {
+      input.signal?.throwIfAborted();
+      const amount = formatTokenAmount(log.amount, input.token.decimals);
+      const priced = await input.pricer.price({
+        chainId: input.chainId,
+        ticker: input.token.ticker,
+        tokenAddress: input.token.address,
+        tokenAmount: amount,
+      });
+      events.push({
+        chainId: input.chainId,
+        txHash: log.txHash,
+        block: log.block,
+        logIndex: log.logIndex,
+        time: log.time,
+        token: input.token.address,
+        kind: classifyTransfer({
+          from: log.from,
+          to: log.to,
+          amountUsd: priced.amountUsd,
+          whaleMinUsd: input.whaleMinUsd,
+          issuerProfile: input.issuerProfile,
+        }),
         from: log.from,
         to: log.to,
-        amountUsd: priced.amountUsd,
-        whaleMinUsd: input.whaleMinUsd,
-        issuerProfile: input.issuerProfile,
-      }),
-      from: log.from,
-      to: log.to,
-      amount,
-      ...priced,
+        amount,
+        ...priced,
+      });
+    }
+
+    await input.store.replaceRange({
+      chainId: input.chainId,
+      token: input.token.address,
+      fromBlock: chunkFrom,
+      throughBlock: chunkTo,
+      events,
     });
+    eventCount += events.length;
   }
 
-  await input.store.replaceRange({
-    chainId: input.chainId,
-    token: input.token.address,
-    fromBlock,
-    throughBlock: input.throughBlock,
-    events,
-  });
   return {
     fromBlock,
     throughBlock: input.throughBlock,
-    events: events.length,
+    events: eventCount,
   };
+}
+
+export function isProviderRangeLimitError(error: unknown): boolean {
+  const pending: unknown[] = [error];
+  const visited = new Set<unknown>();
+  while (pending.length > 0) {
+    const current = pending.pop();
+    if (current === undefined || current === null || visited.has(current)) {
+      continue;
+    }
+    visited.add(current);
+    if (typeof current === "string") {
+      if (
+        /(block|query|response|result|log).{0,32}(range|limit|large|many|size)|range.{0,32}(limit|large)|more than.{0,16}(result|log)/i.test(
+          current,
+        )
+      ) {
+        return true;
+      }
+      continue;
+    }
+    if (typeof current !== "object") {
+      continue;
+    }
+    const record = current as Record<string, unknown>;
+    if (record.code === -32005) {
+      return true;
+    }
+    if (record.message !== undefined) pending.push(record.message);
+    if (record.shortMessage !== undefined) pending.push(record.shortMessage);
+    if (record.details !== undefined) pending.push(record.details);
+    if (record.cause !== undefined) pending.push(record.cause);
+  }
+  return false;
 }
 
 function formatTokenAmount(value: bigint, decimals: number): string {
