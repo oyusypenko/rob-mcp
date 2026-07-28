@@ -1,0 +1,24 @@
+---
+import { nav, path, repository } from "../lib/site";
+---
+
+<header class="site-header">
+  <div class="shell header-inner">
+    <a class="brand" href={path("/")} aria-label="rob-mcp home">
+      <span aria-hidden="true" class="brand-mark">r/</span>
+      <span>rob-mcp</span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <ul>
+        {
+          nav.map((item) => (
+            <li>
+              <a href={path(item.href)}>{item.label}</a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+    <a class="repo-link" href={repository}>GitHub <span aria-hidden="true">↗</span></a>
+  </div>
+</header>

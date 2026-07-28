@@ -1,0 +1,46 @@
+---
+import BaseLayout from "./BaseLayout.astro";
+import Breadcrumbs from "../components/Breadcrumbs.astro";
+import { docsNav, path } from "../lib/site";
+
+interface Props {
+  title: string;
+  description: string;
+  section?: string;
+}
+
+const { title, description, section } = Astro.props;
+const crumbs = [
+  { label: "Docs", href: "/docs/" },
+  ...(section ? [{ label: section, href: Astro.url.pathname }] : []),
+  ...(title !== "Documentation" ? [{ label: title }] : []),
+];
+---
+
+<BaseLayout title={title} description={description} kind="article" breadcrumbs={crumbs}>
+  <div class="shell docs-shell">
+    <aside class="docs-nav" aria-label="Documentation navigation">
+      <p class="eyebrow">Documentation</p>
+      <nav>
+        <ul>
+          {
+            docsNav.map(([href, label]) => (
+              <li>
+                <a
+                  href={path(href)}
+                  aria-current={Astro.url.pathname === path(href) ? "page" : undefined}
+                >
+                  {label}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </nav>
+    </aside>
+    <article class="prose">
+      <Breadcrumbs items={crumbs} />
+      <slot />
+    </article>
+  </div>
+</BaseLayout>

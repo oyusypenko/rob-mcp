@@ -68,6 +68,15 @@ else
   bun test || fail=1
 fi
 
+stage "derived site"
+if ! command -v bun >/dev/null 2>&1; then
+  skip "bun not installed"
+elif [ ! -d site ]; then
+  skip "site not implemented"
+else
+  bun run --silent site:check || fail=1
+fi
+
 printf '\n'
 if [ "$fail" -ne 0 ]; then
   echo "validate: FAIL"

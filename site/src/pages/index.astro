@@ -1,0 +1,120 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Status from "../components/Status.astro";
+import { manifest, path } from "../lib/site";
+---
+
+<BaseLayout
+  title="rob-mcp"
+  description="Verified tokenized-equity data tools for AI agents, available through local MCP, hosted MCP, and a typed JSON API."
+  kind="application"
+>
+  <section class="hero">
+    <div class="shell hero-grid">
+      <div>
+        <p class="eyebrow">One verified core · three ways to call it</p>
+        <h1>Market context agents can verify.</h1>
+        <p class="lede">
+          rob-mcp turns on-chain stock-token registries, oracle provenance, liquidity, and flow data
+          into typed tools for AI agents. Local MCP stays free. Hosted calls use x402—without
+          accounts, subscriptions, or API keys.
+        </p>
+        <div class="actions">
+          <a class="button primary" href={path("/docs/getting-started/local/")}>Start locally</a>
+          <a class="button" href={path("/docs/tools/")}>Explore the tools</a>
+        </div>
+      </div>
+      <div class="terminal" aria-label="Local MCP setup example">
+        <div class="terminal-bar">~/agent-config.json</div>
+        <pre><code>{`{
+  "mcpServers": {
+    "rob-mcp": {
+      "command": "npx",
+      "args": ["-y", "rob-mcp"],
+      "env": {
+        "RPC_URL_4663": "\${RPC_URL_4663}"
+      }
+    }
+  }
+}`}</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <section class="section dark">
+    <div class="shell">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Implemented capability</p>
+          <h2>One contract. No surface drift.</h2>
+        </div>
+        <p>
+          Every card below is generated from the same tool definitions that power MCP and HTTP.
+          Availability labels include the unresolved safety gates.
+        </p>
+      </div>
+      <div class="grid">
+        {
+          manifest.tools.map((tool) => (
+            <article class="card">
+              <Status value={tool.availability} />
+              <h3>
+                <a href={path(`/docs/tools/${tool.name}/`)}>{tool.title}</a>
+              </h3>
+              <p>{tool.description}</p>
+              <code>{tool.name}</code>
+            </article>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="shell">
+      <p class="eyebrow">Choose your path</p>
+      <h2>From zero setup to paid automation.</h2>
+      <div class="grid">
+        <article class="card">
+          <span class="number">01 / local</span>
+          <h3>Bring your own RPC</h3>
+          <p>
+            Run the stdio MCP locally with Bun or plain Node. No rob-mcp account and no payment.
+          </p>
+          <a href={path("/docs/getting-started/local/")}>Local quickstart</a>
+        </article>
+        <article class="card">
+          <span class="number">02 / hosted</span>
+          <h3>Connect over MCP</h3>
+          <p>
+            Use Streamable HTTP with an x402-capable client. Base Sepolia is the documented test
+            path.
+          </p>
+          <a href={path("/docs/getting-started/hosted/")}>Hosted quickstart</a>
+        </article>
+        <article class="card">
+          <span class="number">03 / API</span>
+          <h3>POST typed JSON</h3>
+          <p>Every hosted tool has one versioned POST route and the same canonical input schema.</p>
+          <a href={path("/docs/api/")}>JSON API guide</a>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="shell card">
+      <p class="eyebrow">Trust boundary</p>
+      <h2>Your keys stay yours.</h2>
+      <p class="lede">
+        The hosted service never receives wallet secrets, Robinhood credentials, personal Trading
+        MCP URLs, or user funds. Unsafe or liveness-unverified market reads fail closed and
+        successful data carries source, time, chain, and pool provenance.
+      </p>
+      <div class="actions">
+        <a class="button primary" href={path("/docs/safety/")}>Read the safety model</a>
+        <a class="button" href={path("/pricing/")}>See exact pricing</a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

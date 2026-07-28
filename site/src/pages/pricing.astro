@@ -1,0 +1,113 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Breadcrumbs from "../components/Breadcrumbs.astro";
+import Status from "../components/Status.astro";
+import { manifest, path } from "../lib/site";
+
+const paid = manifest.tools.filter((tool) => tool.tier === "paid");
+const crumbs = [{ label: "Pricing" }];
+---
+
+<BaseLayout
+  title="Per-call pricing"
+  description="Exact x402 USDC pricing for every implemented rob-mcp paid tool, plus the configurable free allowance and payment flow."
+  breadcrumbs={crumbs}
+>
+  <div class="shell page-head">
+    <Breadcrumbs items={crumbs} />
+    <p class="eyebrow">Transparent by construction</p>
+    <h1>Pay per useful call. Nothing recurring.</h1>
+    <p class="lede">
+      No rob-mcp account. No subscription. No API key. Paid calls settle in USDC through x402 after
+      the deployment’s free allowance.
+    </p>
+  </div>
+  <section class="section">
+    <div class="shell">
+      <table class="price-table">
+        <thead><tr><th>Tool</th><th>Availability</th><th>USDC / call</th></tr></thead>
+        <tbody>
+          {
+            paid.map((tool) => (
+              <tr>
+                <td data-label="Tool">
+                  <a href={path(`/docs/tools/${tool.name}/`)}>
+                    <code>{tool.name}</code>
+                  </a>
+                </td>
+                <td data-label="Availability">
+                  <Status value={tool.availability} />
+                </td>
+                <td class="price" data-label="USDC / call">
+                  {tool.price}
+                </td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+      <div class="callout">
+        <strong>Always free:</strong>
+        <code>GET /healthz</code> and
+        <code>list_stock_tokens</code>. Paid routes receive a configurable free allowance first; the
+        documented default is {manifest.product.freeCallsDefault} calls per IP in a rolling day, not a
+        promise for every deployment.
+      </div>
+    </div>
+  </section>
+  <section class="section dark">
+    <div class="shell">
+      <p class="eyebrow">How payment works</p>
+      <h2>HTTP status 402 is the checkout.</h2>
+      <div class="grid">
+        <article class="card">
+          <span class="number">01</span><h3>Request</h3><p>
+            The route returns a machine-readable 402 challenge in <code>PAYMENT-REQUIRED</code> after
+            the free allowance.
+          </p>
+        </article>
+        <article class="card">
+          <span class="number">02</span><h3>Authorize</h3><p>
+            Your x402 client signs an EIP-3009 USDC authorization. rob-mcp never sees the payer’s
+            key.
+          </p>
+        </article>
+        <article class="card">
+          <span class="number">03</span><h3>Verify + settle</h3><p>
+            The client retries with <code>PAYMENT-SIGNATURE</code>; after facilitator verification
+            and settlement, the response includes <code>PAYMENT-RESPONSE</code>.
+          </p>
+        </article>
+      </div>
+    </div>
+  </section>
+  <section class="section">
+    <div class="shell prose faq">
+      <h2>Pricing questions</h2>
+      <details open>
+        <summary>Which network should I test on?</summary><p>
+          Base Sepolia is the documented test path, using a throwaway test wallet. Base mainnet
+          payment and paid data redistribution remain gated by O-5.
+        </p>
+      </details>
+      <details>
+        <summary>Do I deposit funds with rob-mcp?</summary><p>
+          No. The payer’s own x402-compatible wallet authorizes USDC and facilitator-mediated
+          settlement sends it to the service’s receive-only address.
+        </p>
+      </details>
+      <details>
+        <summary>Can the site change a price?</summary><p>
+          No. This table is generated from the runtime PRICING map and checked against the tool
+          contract during every site build.
+        </p>
+      </details>
+      <div class="actions">
+        <a class="button primary" href={path("/docs/getting-started/hosted/")}
+          >Try the hosted flow</a
+        >
+        <a class="button" href={path("/docs/api/")}>Copy API examples</a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

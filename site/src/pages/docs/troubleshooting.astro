@@ -1,0 +1,45 @@
+---
+import DocLayout from "../../layouts/DocLayout.astro";
+---
+
+<DocLayout
+  title="Troubleshooting"
+  description="Resolve rob-mcp boot failures, RPC chain mismatch, HTTP 402 and 413 responses, free-tier exhaustion, unavailable pools, and oracle safety errors."
+>
+  <p class="eyebrow">Typed failures, concrete fixes</p><h1>Troubleshooting</h1>
+  <h2>RPC chain mismatch</h2>
+  <p>
+    The configured RPC returned a chain ID different from its <code>RPC_URL_&lt;chainId&gt;</code> name.
+    Point the variable to the correct enabled EVM chain and restart.
+  </p>
+  <h2>HTTP 402</h2>
+  <p>
+    The deployment’s free allowance is exhausted. Use an x402-aware client configured for the
+    network in the challenge; do not reuse a settled payment authorization.
+  </p>
+  <h2>HTTP 413</h2>
+  <p>
+    The declared or streamed POST body exceeds the deployment’s configured cap. Submit only the
+    canonical tool input fields.
+  </p>
+  <h2><code>SEQUENCER_STATUS_UNAVAILABLE</code></h2>
+  <p>
+    The required official L2 liveness source is unavailable. This is expected for current Robinhood
+    Chain price-bearing reads while O-8 remains open; there is no caller bypass.
+  </p>
+  <h2><code>NO_VERIFIED_POOL</code></h2>
+  <p>
+    No verified pool is registered for the requested token and venue. Discovery can still succeed
+    and liquidity can return an empty venues list.
+  </p>
+  <h2>Stale or paused oracle</h2>
+  <p>
+    The reference source failed freshness or safety checks. Wait for the upstream source to recover;
+    rob-mcp intentionally returns no price-bearing result.
+  </p>
+  <h2>Facilitator unavailable</h2>
+  <p>
+    Payment verification or settlement could not complete. Keep the payment authorization private to
+    your client and retry after the configured facilitator recovers.
+  </p>
+</DocLayout>

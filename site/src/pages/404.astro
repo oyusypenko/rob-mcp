@@ -1,0 +1,21 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { path } from "../lib/site";
+---
+
+<BaseLayout
+  title="Page not found"
+  description="The requested rob-mcp documentation page could not be found; return to the documentation or generated tool reference."
+  noindex
+>
+  <div class="shell page-head">
+    <p class="eyebrow">404</p><h1>That route is not in the registry.</h1>
+    <p class="lede">The page may have moved, or the capability may not be implemented.</p>
+    <div class="actions">
+      <a class="button primary" href={path("/docs/")}>Open documentation</a><a
+        class="button"
+        href={path("/docs/tools/")}>Browse tools</a
+      >
+    </div>
+  </div>
+</BaseLayout>

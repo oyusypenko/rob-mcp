@@ -1,0 +1,49 @@
+---
+import DocLayout from "../../../layouts/DocLayout.astro";
+import CodeBlock from "../../../components/CodeBlock.astro";
+---
+
+<DocLayout
+  title="Local MCP quickstart"
+  description="Copy-paste setup for running rob-mcp as a free local stdio MCP server with Bun or plain Node and your own Robinhood Chain RPC."
+>
+  <p class="eyebrow">Getting started</p><h1>Run rob-mcp locally</h1>
+  <p class="lede">
+    Local stdio MCP is free. It talks directly to your configured RPC and does not use the hosted
+    x402 paywall.
+  </p>
+  <h2>1. Provide an RPC</h2>
+  <CodeBlock
+    code={`export RPC_URL_4663="https://your-robinhood-chain-rpc.example"`}
+    label="Required environment"
+  />
+  <h2>2. Start the server</h2>
+  <CodeBlock
+    code={`bunx rob-mcp\n# Plain Node is supported too:\nnpx -y rob-mcp`}
+    label="Run stdio MCP"
+  />
+  <h2>3. Add it to your MCP client</h2>
+  <CodeBlock
+    code={`{
+  "mcpServers": {
+    "rob-mcp": {
+      "command": "npx",
+      "args": ["-y", "rob-mcp"],
+      "env": {
+        "RPC_URL_4663": "\${RPC_URL_4663}"
+      }
+    }
+  }
+}`}
+    label="Client configuration"
+  />
+  <h2>4. Make the first call</h2>
+  <p>
+    Ask your client to call <code>list_stock_tokens</code> with <code
+      >{"{"}"search":"AAPL"{"}"}</code
+    >. It is implemented, free, and does not require a price-liveness source.
+  </p>
+  <div class="callout">
+    The server verifies the RPC’s live chain ID at boot. A URL for the wrong chain fails closed.
+  </div>
+</DocLayout>

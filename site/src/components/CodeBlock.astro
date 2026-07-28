@@ -1,0 +1,11 @@
+---
+const { code, label = "Copy-paste example" } = Astro.props as {
+  code: string;
+  label?: string;
+};
+---
+
+<figure class="code-block">
+  <figcaption>{label}</figcaption>
+  <pre tabindex="0" aria-label={label}><code>{code}</code></pre>
+</figure>

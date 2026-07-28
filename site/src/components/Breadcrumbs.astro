@@ -1,0 +1,27 @@
+---
+import { path } from "../lib/site";
+
+interface Crumb {
+  label: string;
+  href?: string;
+}
+
+const { items } = Astro.props as { items: Crumb[] };
+---
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <ol>
+    <li><a href={path("/")}>Home</a></li>
+    {
+      items.map((item, index) => (
+        <li>
+          {item.href && index < items.length - 1 ? (
+            <a href={path(item.href)}>{item.label}</a>
+          ) : (
+            <span aria-current="page">{item.label}</span>
+          )}
+        </li>
+      ))
+    }
+  </ol>
+</nav>

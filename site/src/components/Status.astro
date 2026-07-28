@@ -1,0 +1,11 @@
+---
+const { value } = Astro.props as { value: string };
+const label =
+  value === "implemented"
+    ? "Implemented"
+    : value === "planned-gated-o9"
+      ? "Planned · O-9 gated"
+      : "Implemented · live-gated";
+---
+
+<span class:list={["status", value]}>{label}</span>

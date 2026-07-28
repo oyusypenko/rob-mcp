@@ -1,0 +1,42 @@
+---
+import { getCollection } from "astro:content";
+import DocLayout from "../../../layouts/DocLayout.astro";
+import Status from "../../../components/Status.astro";
+import { manifest, path } from "../../../lib/site";
+
+const tools = await getCollection("tools");
+---
+
+<DocLayout
+  title="Tool reference"
+  description="Generated reference pages for every implemented rob-mcp tool, including availability, surfaces, tiers, schemas, examples, provenance, and errors."
+>
+  <p class="eyebrow">Generated from runtime definitions</p><h1>Tool reference</h1>
+  <p class="lede">
+    Each implemented definition gets exactly one page. Prices and availability are validated before
+    Astro renders this index.
+  </p>
+  <div class="grid">
+    {
+      tools.map(({ data: tool }) => (
+        <article class="card">
+          <Status value={tool.availability} />
+          <h3>
+            <a href={path(`/docs/tools/${tool.name}/`)}>{tool.title}</a>
+          </h3>
+          <p>{tool.description}</p>
+          <p>
+            <code>{tool.name}</code> · {tool.tier === "free" ? "free" : `${tool.price} USDC/call`}
+          </p>
+        </article>
+      ))
+    }
+  </div>
+  <h2>Local trading roadmap</h2>
+  <Status value={manifest.availability.localTrading} />
+  <p>
+    <code>position_check</code>, <code>trade_prepare</code>, and <code>trade_execute</code> are planned
+    local-only wrapper tools. They are not implemented definitions and never appear on hosted surfaces.
+    Upstream mapping and execution remain gated by O-9.
+  </p>
+</DocLayout>

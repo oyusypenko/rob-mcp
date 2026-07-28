@@ -1,0 +1,44 @@
+---
+import DocLayout from "../../../layouts/DocLayout.astro";
+import CodeBlock from "../../../components/CodeBlock.astro";
+---
+
+<DocLayout
+  title="Hosted quickstart"
+  description="Connect to hosted rob-mcp over Streamable HTTP or JSON, begin with free discovery, and understand the Base Sepolia x402 test flow."
+>
+  <p class="eyebrow">Getting started</p><h1>Connect to hosted rob-mcp</h1>
+  <p class="lede">
+    Keep the deployment configurable. These examples use <code>$ROB_MCP_URL</code> rather than inventing
+    a production host.
+  </p>
+  <h2>Set the service URL</h2>
+  <CodeBlock
+    code={`export ROB_MCP_URL="https://your-deployment.example"`}
+    label="Hosted endpoint"
+  />
+  <h2>Start with free discovery</h2>
+  <CodeBlock
+    code={`curl --fail-with-body \\
+  -X POST "$ROB_MCP_URL/api/v1/tools/list_stock_tokens" \\
+  -H "Content-Type: application/json" \\
+  --data '{"search":"AAPL","chain":4663}'`}
+    label="Free JSON call"
+  />
+  <h2>Connect hosted MCP</h2>
+  <p>
+    The Streamable HTTP endpoint is <code>$ROB_MCP_URL/mcp</code>. Use an MCP client with x402
+    payment support for paid tools; structured outputs use the same schemas as the JSON API.
+  </p>
+  <h2>Test payment safely</h2>
+  <p>
+    Use Base Sepolia and a throwaway funded test wallet. The first paid request receives 402 with <code
+      >PAYMENT-REQUIRED</code
+    >; an x402-aware client creates an EIP-3009 authorization and retries with <code
+      >PAYMENT-SIGNATURE</code
+    >.
+  </p>
+  <div class="callout">
+    Base mainnet availability is not implied. Paid mainnet redistribution remains gated by O-5.
+  </div>
+</DocLayout>

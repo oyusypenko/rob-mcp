@@ -1,0 +1,44 @@
+---
+import DocLayout from "../../layouts/DocLayout.astro";
+import { path } from "../../lib/site";
+---
+
+<DocLayout
+  title="Documentation"
+  description="Learn how rob-mcp exposes one verified tokenized-equity data core through local MCP, hosted MCP, and a JSON API."
+>
+  <p class="eyebrow">Concepts and guides</p>
+  <h1>Documentation</h1>
+  <p class="lede">
+    Call verified tokenized-equity data without treating the website as a source of market truth.
+    The runtime contract, registries, and provenance remain canonical.
+  </p>
+  <h2>One core, two runtime surfaces</h2>
+  <p>
+    The same definitions produce MCP tools and versioned JSON routes. Local stdio is free and brings
+    its own RPC; hosted Streamable HTTP and JSON API calls share one x402 paywall.
+  </p>
+  <div class="grid">
+    <article class="card">
+      <h3>Run locally</h3><p>
+        Configure an enabled-chain RPC and launch with <code>bunx</code> or <code>npx</code>.
+      </p><a href={path("/docs/getting-started/local/")}>Local setup</a>
+    </article>
+    <article class="card">
+      <h3>Call hosted</h3><p>
+        Use <code>$ROB_MCP_URL</code>, begin with free discovery, then test x402 on Base Sepolia.
+      </p><a href={path("/docs/getting-started/hosted/")}>Hosted setup</a>
+    </article>
+    <article class="card">
+      <h3>Understand failure</h3><p>
+        Stale, paused, or liveness-unverified market reads fail closed with typed errors.
+      </p><a href={path("/docs/troubleshooting/")}>Troubleshooting</a>
+    </article>
+  </div>
+  <h2>Verified registry, explicit provenance</h2>
+  <p>
+    Chain, token, quote-asset, and venue support comes from verified repository registries.
+    Successful market-derived outputs include chain, oracle source and timestamp, and pool or feed
+    details where applicable.
+  </p>
+</DocLayout>

@@ -9,3 +9,5 @@ dist/
 .DS_Store
 .fly/
 coverage/
+site/.astro/
+site/src/generated/*.json

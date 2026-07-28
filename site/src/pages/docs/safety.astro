@@ -1,0 +1,44 @@
+---
+import DocLayout from "../../layouts/DocLayout.astro";
+---
+
+<DocLayout
+  title="Safety model"
+  description="How rob-mcp avoids custody, fails closed on unsafe market data, proves provenance, bounds hosted work, and keeps trading local-only."
+>
+  <p class="eyebrow">Designed failure boundaries</p><h1>Safety model</h1>
+  <p class="lede">
+    rob-mcp is a data service, not financial advice or an execution venue. It prefers an explicit
+    unavailable result to an unsafe market number.
+  </p>
+  <h2>No custody</h2>
+  <p>
+    The hosted service never receives private keys, mnemonics, Robinhood credentials, personal
+    Trading MCP URLs, or user funds. x402 authorization is signed by the payer and
+    facilitator-settled to a receive-only service address.
+  </p>
+  <h2>Market data fails closed</h2>
+  <p>
+    Stale, invalid, paused, or liveness-unverified sources produce typed errors. Robinhood Chain
+    price-bearing operations currently return <code>SEQUENCER_STATUS_UNAVAILABLE</code> because the required
+    official sequencer-uptime source remains unresolved under O-8.
+  </p>
+  <h2>Provenance is part of the result</h2>
+  <p>
+    Successful price-bearing outputs expose the chain, source, observation time, safety gates, and
+    relevant feed, provider, and pool identifiers. Static documentation never presents fixture
+    market values as live observations.
+  </p>
+  <h2>Trading stays local</h2>
+  <p>
+    The planned trading wrapper composes the user’s own Robinhood Trading MCP connection in a local
+    stdio process. It is not hosted or exposed through the paid service, and implementation remains
+    gated by O-9.
+  </p>
+  <h2>Bounded hosted work</h2>
+  <p>
+    Request bodies, quote sizes, lookback windows, result counts, free-tier identity storage, and
+    payment replay evidence are bounded by validated deployment configuration. Full security stores
+    fail closed.
+  </p>
+</DocLayout>

@@ -1,0 +1,69 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Breadcrumbs from "../components/Breadcrumbs.astro";
+import { manifest } from "../lib/site";
+
+const crumbs = [{ label: "FAQ" }];
+const faqs = [
+  [
+    "Do I need a rob-mcp account?",
+    "No. Local MCP uses your RPC. Hosted payment uses x402 without a rob-mcp account, subscription, or API key.",
+  ],
+  [
+    "Does rob-mcp hold my wallet or USDC?",
+    "No. The payer signs locally; facilitator-mediated settlement sends USDC to the service’s receive-only address.",
+  ],
+  [
+    "Which data chains are registered?",
+    manifest.chains.map((chain) => `${chain.name} (${chain.id})`).join(", ") +
+      ". Registry state, not marketing copy, defines support.",
+  ],
+  [
+    "Why can a tool be implemented but live-gated?",
+    "The handler and schemas exist, but a required safety dependency is unresolved. Current Robinhood Chain price-bearing reads fail closed until O-8 resolves the sequencer-liveness source.",
+  ],
+  [
+    "Can rob-mcp trade for me?",
+    "No hosted service can. The planned wrapper runs locally with the user’s own Robinhood Trading MCP connection and remains gated by O-9.",
+  ],
+  [
+    "Is this financial advice?",
+    "No. rob-mcp is a data service. Results carry provenance and remain inputs to your own analysis and risk controls.",
+  ],
+  [
+    "Where do prices on the pricing page come from?",
+    "The build imports the runtime PRICING map, checks it against the documented tool table, and refuses to build on drift.",
+  ],
+];
+const faqLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: faqs.map(([question, answer]) => ({
+    "@type": "Question",
+    name: question,
+    acceptedAnswer: { "@type": "Answer", text: answer },
+  })),
+};
+---
+
+<BaseLayout
+  title="Frequently asked questions"
+  description="Answers about rob-mcp accounts, x402 and USDC, supported chains, live gates, custody, provenance, local trading, and pricing."
+  breadcrumbs={crumbs}
+>
+  <script is:inline type="application/ld+json" slot="head" set:html={JSON.stringify(faqLd)} />
+  <div class="shell page-head prose faq">
+    <Breadcrumbs items={crumbs} />
+    <p class="eyebrow">The short version</p><h1>Frequently asked questions</h1>
+    {
+      faqs.map(([question, answer], index) => (
+        <details open={index === 0}>
+          <>
+            <summary>{question}</summary>
+            <p>{answer}</p>
+          </>
+        </details>
+      ))
+    }
+  </div>
+</BaseLayout>

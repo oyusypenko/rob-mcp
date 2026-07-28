@@ -1,0 +1,43 @@
+---
+import DocLayout from "../../layouts/DocLayout.astro";
+import CodeBlock from "../../components/CodeBlock.astro";
+---
+
+<DocLayout
+  title="JSON API guide"
+  description="Use rob-mcp versioned JSON POST routes with canonical request schemas, bounded bodies, structured responses, provenance, and x402 errors."
+>
+  <p class="eyebrow">HTTP reference</p><h1>JSON API</h1>
+  <p class="lede">
+    Every hosted tool has exactly one JSON route: <code>POST /api/v1/tools/&lt;tool-name&gt;</code>.
+    There are no GET or unversioned aliases.
+  </p>
+  <h2>Free discovery</h2>
+  <CodeBlock
+    code={`export ROB_MCP_URL="https://your-deployment.example"\ncurl --fail-with-body \\
+  -X POST "$ROB_MCP_URL/api/v1/tools/list_stock_tokens" \\
+  -H "Content-Type: application/json" \\
+  --data '{"search":"AAPL","chain":4663}'`}
+  />
+  <h2>Paid request lifecycle</h2>
+  <p>
+    A paid route can run inside the deployment’s remaining free allowance. After that, the initial
+    request returns HTTP 402 with <code>PAYMENT-REQUIRED</code>. An x402-aware client signs, retries
+    with <code>PAYMENT-SIGNATURE</code>, and receives <code>PAYMENT-RESPONSE</code> after facilitator
+    verification and settlement.
+  </p>
+  <h2>Limits and errors</h2>
+  <ul>
+    <li><strong>413:</strong> body exceeds the deployment’s configured pre-parse cap.</li>
+    <li><strong>402:</strong> free allowance is exhausted and payment is required.</li>
+    <li><strong>Validation error:</strong> body does not match the canonical strict schema.</li>
+    <li>
+      <strong>Typed runtime error:</strong> a pool, scanner, oracle, or liveness requirement is unavailable.
+    </li>
+  </ul>
+  <h2>Provenance</h2>
+  <p>
+    Market-derived values include their chain and source time plus oracle, feed, provider, pool, and
+    safety-gate fields where the tool contract requires them.
+  </p>
+</DocLayout>

@@ -1,0 +1,40 @@
+---
+import DocLayout from "../../layouts/DocLayout.astro";
+import CodeBlock from "../../components/CodeBlock.astro";
+---
+
+<DocLayout
+  title="x402 payments"
+  description="Understand rob-mcp’s x402 flow: HTTP 402 challenge, payer-signed EIP-3009 authorization, retry, facilitator verification, and USDC settlement."
+>
+  <p class="eyebrow">Pay per call</p><h1>x402 payments</h1>
+  <p class="lede">
+    The payment protocol turns a normal HTTP response into a machine-readable checkout without
+    creating a rob-mcp account or API key.
+  </p>
+  <h2>Lifecycle</h2>
+  <ol>
+    <li>The client POSTs the canonical tool input.</li>
+    <li>After the free allowance, the server returns 402 with <code>PAYMENT-REQUIRED</code>.</li>
+    <li>The payer’s own wallet signs an EIP-3009 USDC authorization.</li>
+    <li>The client retries with <code>PAYMENT-SIGNATURE</code>.</li>
+    <li>
+      The facilitator verifies and settles before the handler runs; the response includes <code
+        >PAYMENT-RESPONSE</code
+      >.
+    </li>
+  </ol>
+  <h2>Test on Base Sepolia</h2>
+  <CodeBlock
+    code={`export ROB_MCP_URL="https://your-test-deployment.example"\n# Configure your x402-aware client for eip155:84532\n# Use only a throwaway funded Base Sepolia test wallet.`}
+  />
+  <div class="callout">
+    Base mainnet uses the CDP facilitator, but paid mainnet redistribution remains gated by O-5.
+    This documentation does not claim production availability.
+  </div>
+  <h2>Custody boundary</h2>
+  <p>
+    The hosted server signs nothing. It knows only its receive-only settlement address; the payer
+    signs locally and facilitator-mediated settlement moves USDC.
+  </p>
+</DocLayout>

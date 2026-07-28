@@ -1,0 +1,48 @@
+name: site-pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    # O-10: no production SEO deployment until the canonical public hostname is chosen.
+    if: vars.SITE_CANONICAL_URL != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.14"
+      - run: bun install --frozen-lockfile
+      - name: Validate repository and build canonical static artifact
+        env:
+          SITE_CANONICAL_URL: ${{ vars.SITE_CANONICAL_URL }}
+          SITE_BASE: ${{ vars.SITE_BASE }}
+        run: bun run validate
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+
+  deploy:
+    if: vars.SITE_CANONICAL_URL != ''
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy the validated artifact
+        id: deployment
+        uses: actions/deploy-pages@v5

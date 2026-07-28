@@ -1,0 +1,34 @@
+---
+import DocLayout from "../../layouts/DocLayout.astro";
+import CodeBlock from "../../components/CodeBlock.astro";
+---
+
+<DocLayout
+  title="MCP guide"
+  description="Configure rob-mcp over local stdio or hosted stateless Streamable HTTP, with structured outputs, errors, and x402-paid tool behavior."
+>
+  <p class="eyebrow">Protocol guide</p><h1>MCP: local and hosted</h1>
+  <p class="lede">
+    Both transports register the same implemented definitions. Transport changes do not create a
+    second tool contract.
+  </p>
+  <h2>Local stdio</h2>
+  <CodeBlock
+    code={`export RPC_URL_4663="https://your-robinhood-chain-rpc.example"\nnpx -y rob-mcp`}
+  />
+  <p>Local mode is free, starts a plain stdio MCP server, and runs on Bun or plain Node.</p>
+  <h2>Hosted Streamable HTTP</h2>
+  <CodeBlock
+    code={`export ROB_MCP_URL="https://your-deployment.example"\n# MCP endpoint: $ROB_MCP_URL/mcp`}
+  />
+  <p>
+    The hosted server is stateless per request. Paid MCP tools use the same prices and x402
+    requirements as their JSON routes.
+  </p>
+  <h2>Structured results and errors</h2>
+  <p>
+    Outputs follow each tool’s generated object schema. Input validation, unavailable pools,
+    unavailable scanner state, and fail-closed oracle/liveness gates are returned as typed tool
+    errors instead of plausible-looking data.
+  </p>
+</DocLayout>

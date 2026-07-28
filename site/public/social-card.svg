@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">rob-mcp</title>
+  <desc id="desc">Verified tokenized-equity data for AI agents</desc>
+  <rect width="1200" height="630" fill="#f6f3eb"/>
+  <circle cx="105" cy="75" r="330" fill="#90efbf" opacity=".28"/>
+  <rect x="72" y="72" width="84" height="84" rx="22" fill="#123f34"/>
+  <text x="88" y="128" fill="#d7ff6f" font-family="monospace" font-size="40" font-weight="700">r/</text>
+  <text x="180" y="130" fill="#14201d" font-family="system-ui,sans-serif" font-size="42" font-weight="800">rob-mcp</text>
+  <text x="72" y="315" fill="#14201d" font-family="Georgia,serif" font-size="78" font-weight="700">Market context</text>
+  <text x="72" y="402" fill="#14201d" font-family="Georgia,serif" font-size="78" font-weight="700">agents can verify.</text>
+  <text x="76" y="505" fill="#53625d" font-family="system-ui,sans-serif" font-size="30">Local MCP · Hosted MCP · x402 JSON API</text>
+  <path d="M910 155h190v320H850V215z" fill="#123f34"/>
+  <path d="M890 220h150M890 280h110M890 340h170M890 400h130" stroke="#90efbf" stroke-width="16" stroke-linecap="round"/>
+  <circle cx="1080" cy="475" r="62" fill="#ffbe63"/>
+</svg>

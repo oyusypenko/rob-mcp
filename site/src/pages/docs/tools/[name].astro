@@ -1,0 +1,92 @@
+---
+import type { GetStaticPaths } from "astro";
+import { getCollection } from "astro:content";
+import DocLayout from "../../../layouts/DocLayout.astro";
+import CodeBlock from "../../../components/CodeBlock.astro";
+import Status from "../../../components/Status.astro";
+import { path } from "../../../lib/site";
+
+export const getStaticPaths = (async () => {
+  const tools = await getCollection("tools");
+  return tools.map((entry) => ({
+    params: { name: entry.data.name },
+    props: { tool: entry.data },
+  }));
+}) satisfies GetStaticPaths;
+
+const { tool } = Astro.props;
+const body = JSON.stringify(tool.exampleInput);
+const example = `export ROB_MCP_URL="https://your-deployment.example"
+curl --fail-with-body \\
+  -X POST "$ROB_MCP_URL${tool.route}" \\
+  -H "Content-Type: application/json" \\
+  --data '${body}'`;
+---
+
+<DocLayout
+  title={tool.title}
+  description={`${tool.description} See inputs, outputs, availability, price, errors, and a runnable example.`}
+>
+  <p class="eyebrow">Tool reference</p><h1>{tool.title}</h1>
+  <p class="lede">{tool.description}</p>
+  <p><Status value={tool.availability} /></p>
+  <dl>
+    <dt>Tool name</dt><dd><code>{tool.name}</code></dd>
+    <dt>Tier</dt><dd>
+      {
+        tool.tier === "free"
+          ? "Free; never paywalled"
+          : `${tool.price} USDC per hosted call after the free allowance`
+      }
+    </dd>
+    <dt>Surfaces</dt><dd>
+      {tool.surfaces.join(", ")} MCP plus {
+        tool.surfaces.includes("hosted") ? "hosted JSON API" : "no hosted JSON route"
+      }
+    </dd>
+    <dt>Route</dt><dd><code>POST {tool.route}</code></dd>
+  </dl>
+  {
+    tool.gates.length > 0 && (
+      <div class="callout">
+        <>
+          <strong>Availability gate:</strong>
+          <ul>
+            {tool.gates.map((gate: string) => (
+              <li>{gate}</li>
+            ))}
+          </ul>
+        </>
+      </div>
+    )
+  }
+  <h2>Minimal JSON API example</h2>
+  <CodeBlock code={example} label={`${tool.name} request`} />
+  {
+    tool.tier === "paid" && (
+      <p>
+        The first request may run inside the free allowance or return 402. Use an x402-aware client
+        to sign and retry; do not manually invent the payment header.
+      </p>
+    )
+  }
+  <h2>Input schema</h2>
+  <div class="code-block schema">
+    <pre tabindex="0"><code>{JSON.stringify(tool.inputSchema, null, 2)}</code></pre>
+  </div>
+  <h2>Output and provenance</h2>
+  <p>
+    Responses are strict structured objects. Fields below are generated from the canonical output
+    schema; market-derived fields are live runtime reads, not values embedded on this page.
+  </p>
+  <div class="code-block schema">
+    <pre tabindex="0"><code>{JSON.stringify(tool.outputSchema, null, 2)}</code></pre>
+  </div>
+  <h2>Errors and limits</h2>
+  <p>
+    Invalid inputs fail schema validation. Runtime work stays deployment-bounded. Price-bearing
+    reads fail closed when oracle, liveness, or verified-pool requirements are unavailable;
+    scanner-backed reads also report scanner unavailability.
+  </p>
+  <p><a href={path("/docs/troubleshooting/")}>Match typed errors to corrective steps</a></p>
+</DocLayout>

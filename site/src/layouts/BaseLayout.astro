@@ -1,0 +1,99 @@
+---
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+import { path } from "../lib/site";
+import "../styles/global.css";
+
+interface Props {
+  title: string;
+  description: string;
+  kind?: "website" | "application" | "article" | "faq";
+  breadcrumbs?: Array<{ label: string; href?: string }>;
+  noindex?: boolean;
+}
+
+const { title, description, kind = "website", breadcrumbs = [], noindex = false } = Astro.props;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const socialImage = new URL(path("/social-card.svg"), Astro.site);
+const pageTitle = title === "rob-mcp" ? title : `${title} · rob-mcp`;
+const websiteLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "rob-mcp",
+  url: new URL(path("/"), Astro.site),
+  description: "Verified tokenized-equity data tools for AI agents.",
+};
+const pageLd =
+  kind === "application"
+    ? {
+        "@context": "https://schema.org",
+        "@type": "DeveloperApplication",
+        name: "rob-mcp",
+        applicationCategory: "DeveloperApplication",
+        operatingSystem: "Cross-platform",
+        description,
+        url: canonical,
+      }
+    : kind === "article"
+      ? {
+          "@context": "https://schema.org",
+          "@type": "TechArticle",
+          headline: title,
+          description,
+          url: canonical,
+        }
+      : undefined;
+const breadcrumbLd = breadcrumbs.length
+  ? {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: new URL(path("/"), Astro.site) },
+        ...breadcrumbs.map((item, index) => ({
+          "@type": "ListItem",
+          position: index + 2,
+          name: item.label,
+          ...(item.href ? { item: new URL(path(item.href), Astro.site) } : {}),
+        })),
+      ],
+    }
+  : undefined;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>{pageTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" href={path("/favicon.svg")} type="image/svg+xml" />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
+    <meta property="og:type" content={kind === "article" ? "article" : "website"} />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={socialImage} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={socialImage} />
+    <slot name="head" />
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(websiteLd)} />
+    {pageLd && <script is:inline type="application/ld+json" set:html={JSON.stringify(pageLd)} />}
+    {
+      breadcrumbLd && (
+        <script is:inline type="application/ld+json" set:html={JSON.stringify(breadcrumbLd)} />
+      )
+    }
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <Header />
+    <main id="main-content">
+      <slot />
+    </main>
+    <Footer />
+  </body>
+</html>

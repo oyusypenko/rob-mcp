@@ -1,0 +1,24 @@
+---
+import { path, repository } from "../lib/site";
+---
+
+<footer>
+  <div class="shell footer-grid">
+    <div>
+      <a class="brand" href={path("/")}><span class="brand-mark">r/</span> rob-mcp</a>
+      <p>Verified tokenized-equity data for agents. Not financial advice.</p>
+    </div>
+    <div>
+      <h2>Build</h2>
+      <a href={path("/docs/getting-started/local/")}>Local MCP</a>
+      <a href={path("/docs/api/")}>JSON API</a>
+      <a href={path("/pricing/")}>Pricing</a>
+    </div>
+    <div>
+      <h2>Trust</h2>
+      <a href={path("/docs/safety/")}>Safety</a>
+      <a href={repository}>Source code</a>
+      <a href={`${repository}/issues`}>Issues</a>
+    </div>
+  </div>
+</footer>
