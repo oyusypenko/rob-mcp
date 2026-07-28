@@ -306,6 +306,26 @@ are `O-N` with owners.
   the documented contract, the site is not a runtime/API surface, Fly.io remains the API host,
   no-custody/no-market-metrics rules, all current tool prices, and O-5/O-8/O-9 gates.
 
+- **D-24 — ARCHITECT-DESIGNED: x402 v2 uses the current x402.org testnet facilitator and
+  `PAYMENT-*` headers.** _(2026-07-29; owner rob-surface, docs stewardship rob-architect; x402
+  integration contract — official API evidence as of 2026-07-29.)_ For unauthenticated Base
+  Sepolia testing, the canonical facilitator base URL is `https://x402.org/facilitator`, as listed
+  by Coinbase's official [x402 quickstart](https://docs.cdp.coinbase.com/x402/quickstart-for-buyers)
+  and [FAQ](https://docs.cdp.coinbase.com/x402/support/faq);
+  `https://facilitator.x402.org` is retired from this design and did not resolve in a 2026-07-29
+  DNS check. The v2 HTTP flow is
+  `PAYMENT-REQUIRED` (resource server → client challenge), `PAYMENT-SIGNATURE` (client → resource
+  server retry), and `PAYMENT-RESPONSE` (resource server → client settlement result), per the
+  official [v1 → v2 migration guide](https://docs.cdp.coinbase.com/x402/migration-guide). Context7
+  was attempted first but quota-blocked, so the canonical Coinbase documentation was used as the
+  spec-authority fallback. Rationale: the
+  scoped `@x402/*` 2.20.x line implements v2, and retaining a retired endpoint or v1 header names
+  in the design/runbook would make the required Base Sepolia smoke test fail or validate the wrong
+  wire contract. Runtime verification remains open under O-11 because this arbitration is
+  docs/harness-only. Unchanged: Base Sepolia remains `eip155:84532`; Base mainnet remains
+  `eip155:8453` through the authenticated CDP facilitator; package pins, EIP-3009 settlement,
+  `X402_PAY_TO`, PRICING, the testnet-only throwaway-wallet boundary, and no-custody are unchanged.
+
 ## Open items
 
 - **O-1** _(rob-core)_ — Verify DEX venues beyond Uniswap on-chain: Robinhood docs name
@@ -339,3 +359,6 @@ are `O-N` with owners.
   hostname (repository GitHub Pages URL or a custom domain). It must be set as Astro's canonical
   `site`/`base` configuration before production SEO deployment; local site implementation and CI
   validation may proceed meanwhile.
+- **O-11** _(rob-surface; sign-off rob-security)_ — D-24's facilitator default and regression test
+  have landed separately in `src/http/x402.ts` and `test/http/x402.test.ts`; close this item after
+  rob-security signs off and `/x402-smoke` completes against `https://x402.org/facilitator`.

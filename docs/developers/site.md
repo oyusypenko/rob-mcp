@@ -77,9 +77,9 @@ do not exist until Phase G implementation):
   limits, and copy-paste `curl` examples.
 - `/docs/tools/` — generated index of implemented tools and one generated page per implemented
   tool. Local-only trading tools are separated and visibly gated by Phase F/O-9.
-- `/docs/x402/` — 402 challenge, EIP-3009 signature, `X-PAYMENT` retry, facilitator
-  verify/settle, and `X-PAYMENT-RESPONSE`; Base Sepolia first and Base mainnet only when O-5 is
-  resolved.
+- `/docs/x402/` — 402 challenge via `PAYMENT-REQUIRED`, EIP-3009 signature,
+  `PAYMENT-SIGNATURE` retry, facilitator verify/settle, and `PAYMENT-RESPONSE` (D-24); Base
+  Sepolia first and Base mainnet only when O-5 is resolved.
 - `/docs/safety/` — no custody, no financial advice, oracle/liveness failure behavior, source
   provenance, local-only trading, bounded requests, and responsible use.
 - `/docs/troubleshooting/` — configuration failures and typed runtime failures, including RPC

@@ -160,18 +160,23 @@ event-time oracle provenance. The `bun:sqlite` import is guarded so stdio mode r
 
 ## Payments (x402)
 
-API assumptions as of **2026-07-28** — re-verify via context7 before implementing
+API assumptions as of **2026-07-29** — re-verify via context7 before implementing
 (versions-pinned rule): `@x402/hono` 2.20.0 (`paymentMiddleware`, `x402ResourceServer`),
 `@x402/core` (`HTTPFacilitatorClient`), `@x402/evm` (`ExactEvmScheme`), `@x402/mcp`
 (`createPaymentWrapper`, `buildPaymentRequirements`), `@coinbase/x402` 2.1.0 (CDP facilitator
-auth). MCP SDK pinned to 1.30.x because `@x402/mcp` requires v1 (D-2).
+auth). MCP SDK pinned to 1.30.x because `@x402/mcp` requires v1 (D-2). The facilitator endpoint
+and HTTP headers below were re-verified against Coinbase's official
+[x402 quickstart](https://docs.cdp.coinbase.com/x402/quickstart-for-buyers) and
+[v1 → v2 migration guide](https://docs.cdp.coinbase.com/x402/migration-guide) on 2026-07-29
+(D-24).
 
-Flow: request without payment → **HTTP 402** + `accepts` (scheme `exact`, CAIP-2 network, price
-from the `PRICING` map, `payTo = X402_PAY_TO`) → agent client signs an EIP-3009
-`transferWithAuthorization` (gasless for the payer) → retry with `X-PAYMENT` header → middleware
-verifies via the facilitator → handler runs → facilitator settles USDC on Base → response carries
-`X-PAYMENT-RESPONSE`. Testnet: `https://facilitator.x402.org` on `eip155:84532`; mainnet: CDP
-facilitator on `eip155:8453`. The Bazaar discovery listing is enabled so tools are indexed.
+Flow: request without payment → **HTTP 402** + `PAYMENT-REQUIRED` header carrying `accepts`
+(scheme `exact`, CAIP-2 network, price from the `PRICING` map, `payTo = X402_PAY_TO`) → agent
+client signs an EIP-3009 `transferWithAuthorization` (gasless for the payer) → retry with
+`PAYMENT-SIGNATURE` → middleware verifies via the facilitator → handler runs → facilitator settles
+USDC on Base → response carries `PAYMENT-RESPONSE`. Testnet:
+`https://x402.org/facilitator` on `eip155:84532`; mainnet: CDP facilitator on `eip155:8453`.
+The Bazaar discovery listing is enabled so tools are indexed.
 
 **Free tier**: `/healthz` + `list_stock_tokens` are never paywalled; paid routes allow
 `FREE_CALLS_PER_DAY` per IP via a sliding-window rate limiter (pluggable store; pattern from the

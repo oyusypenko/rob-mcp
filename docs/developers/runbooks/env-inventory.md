@@ -37,6 +37,6 @@ not global env, because block cadence and reorg policy vary by chain.
 | `LOG_LEVEL`                             | all             | no (info)               | JSON logger level                                                                     |
 | `X402_PAY_TO`                           | serve           | yes (serve)             | receive-only USDC address on Base — the only address the server knows                 |
 | `X402_NETWORK`                          | serve           | no (eip155:84532)       | CAIP-2 settlement network (`eip155:8453` = Base mainnet) — independent of data chains |
-| `X402_FACILITATOR_URL`                  | serve           | no                      | facilitator override; defaults per network                                            |
+| `X402_FACILITATOR_URL`                  | serve           | no                      | facilitator override; testnet defaults to `https://x402.org/facilitator` (D-24)       |
 | `CDP_API_KEY_ID` / `CDP_API_KEY_SECRET` | serve (mainnet) | mainnet only            | Coinbase CDP facilitator auth                                                         |
 | `SMOKE_TEST_PRIVATE_KEY`                | scripts only    | no                      | throwaway Base Sepolia payer for `/x402-smoke` — never in `src/`                      |
