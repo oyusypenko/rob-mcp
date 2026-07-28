@@ -75,4 +75,17 @@ describe("loadConfig", () => {
 
     expect(() => loadConfig({ ...baseEnv, MAX_REQUEST_BODY_BYTES: "1048577" }, "stdio")).toThrow();
   });
+
+  test("retains the configured x402 facilitator override", () => {
+    const config = loadConfig(
+      {
+        ...baseEnv,
+        X402_PAY_TO: "0x0000000000000000000000000000000000000001",
+        X402_FACILITATOR_URL: "https://approved.example/facilitator",
+      },
+      "serve",
+    );
+
+    expect(config.x402.facilitatorUrl).toBe("https://approved.example/facilitator");
+  });
 });

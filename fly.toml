@@ -1,0 +1,33 @@
+kill_signal = "SIGTERM"
+kill_timeout = "30s"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8402"
+  SQLITE_PATH = "/data/rob.db"
+  TRUST_PROXY = "fly"
+
+[http_service]
+  internal_port = 8402
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    grace_period = "20s"
+    interval = "30s"
+    method = "GET"
+    path = "/healthz"
+    timeout = "5s"
+
+[[mounts]]
+  source = "rob_mcp_data"
+  destination = "/data"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory = "1gb"

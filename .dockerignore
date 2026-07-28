@@ -1,0 +1,11 @@
+.git
+.github
+.claude
+.codex
+.agents
+node_modules
+test
+scripts
+docs
+*.db
+.env*
