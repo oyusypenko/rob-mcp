@@ -1,0 +1,4 @@
+# Exact-version installs — the versions-pinned rule (.claude/rules/versions-pinned.md)
+# depends on the lockfile matching package.json literally.
+[install]
+exact = true
