@@ -21,10 +21,17 @@ adapters.
 | `stock_liquidity`                 | Depth + spread per venue                                      | paid (x402)      |
 | `stock_quote`                     | Best execution across venues for a size                       | paid (x402)      |
 | `whale_activity`                  | Large transfers, mints, redeems on Stock Token contracts      | paid (x402)      |
+| `position_check`                  | Read a position via YOUR Robinhood Trading MCP                | free, local-only |
 | `trade_prepare` / `trade_execute` | Guarded orders via YOUR Robinhood Trading MCP                 | free, local-only |
 
 Payments: [x402](https://x402.org) — USDC per call on Base, no accounts, no API keys.
 One free tier for discovery; per-tool pricing in `docs/developers/tools.md`.
+
+Phase G adds a public, SEO-oriented marketing and documentation site with generated tool
+references, copy-paste MCP/API examples, troubleshooting, safety guidance, and a dedicated pricing
+page. It is derived from the repository's canonical tool/pricing/design sources rather than
+maintaining a second contract; see `docs/developers/site.md`. The production hostname remains open
+as O-10.
 
 ## Quickstart (target UX — not live yet)
 
@@ -34,7 +41,8 @@ bunx rob-mcp            # stdio MCP for Claude Desktop / Claude Code
 
 # hosted, paid
 #   POST https://<host>/mcp        (Streamable HTTP MCP, x402-paid tools)
-#   GET  https://<host>/api/v1/... (plain JSON API, x402 paywall)
+#   POST https://<host>/api/v1/tools/<tool-name>  (JSON API, x402 paywall)
+#   GET  https://<host>/healthz
 ```
 
 ## Development
