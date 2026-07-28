@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "chains": [
+    {
+      "id": 4663,
+      "name": "Robinhood Chain",
+      "nativeCurrency": {
+        "name": "Ether",
+        "symbol": "ETH",
+        "decimals": 18
+      },
+      "explorer": {
+        "name": "Robinhood Chain Blockscout",
+        "url": "https://robinhoodchain.blockscout.com"
+      },
+      "venues": {
+        "univ2": {
+          "factory": "0x8bceaa40b9acdfaedf85adf4ff01f5ad6517937f"
+        },
+        "univ3": {
+          "factory": "0x1f7d7550B1b028f7571E69A784071F0205FD2EfA",
+          "quoter": "0x33e885ed0ec9bf04ecfb19341582aadcb4c8a9e7",
+          "router": "0xcaf681a66d020601342297493863e78c959e5cb2",
+          "feeTiers": [100, 500, 3000, 10000]
+        }
+      },
+      "quoteAssets": [
+        {
+          "symbol": "USDG",
+          "address": "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168",
+          "decimals": 6,
+          "usdFeed": {
+            "address": "0x61B7e5650328764B076A108EFF5fa7282a1B9aD2",
+            "decimals": 8,
+            "heartbeatSeconds": 86400
+          }
+        }
+      ],
+      "scanner": {
+        "initialChunkBlocks": 5000,
+        "reorgTailBlocks": 200,
+        "headPollIntervalMs": 1000
+      },
+      "oracle": {
+        "kind": "chainlink-aggregator-v3",
+        "requiresSequencerUptime": true,
+        "sequencerUptimeFeed": null
+      },
+      "issuerProfile": {
+        "id": "robinhood-erc8056",
+        "tokenStandard": "erc8056",
+        "multiplier": {
+          "kind": "erc8056-ui-multiplier",
+          "feedIncludesMultiplier": true
+        },
+        "mintRedeem": {
+          "zeroAddress": true,
+          "participantAddresses": ["0xcfAEce2151502dA2a21d47234ae1f08618A60A94"]
+        }
+      }
+    }
+  ]
+}
