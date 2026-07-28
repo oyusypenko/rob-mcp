@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # rob-mcp local CI mirror — also the pre-commit hook (.githooks/pre-commit).
-# Stages: format check → hard-rules scan → typecheck → tests.
+# Stages: format check → hard-rules scan → codex-mirror drift → typecheck → tests.
 # Every stage skips gracefully but LOUDLY when its tool or inputs are missing;
 # CI runs the same script and enforces everything.
 
@@ -39,6 +39,15 @@ if [ -n "$files" ]; then
   fi
 else
   skip "no tracked TypeScript yet"
+fi
+
+stage "codex mirror (sync-codex --check)"
+# D-9: .claude/** is the only hand-edited harness source; AGENTS.md + .codex/** + .agents/**
+# are generated. A stale mirror means Codex is running on out-of-date rules — that is a bug.
+if command -v bun >/dev/null 2>&1; then
+  bun run --silent sync-codex -- --check || fail=1
+else
+  skip "bun not installed"
 fi
 
 stage "typecheck (tsc --noEmit)"

@@ -1,0 +1,8 @@
+# Generated Codex mirror (scripts/sync-codex.ts). Formatting these would fight the generator:
+# prettier would rewrite the output, then `sync-codex --check` would report permanent drift.
+# Edit the .claude/** sources instead, then run `bun run sync-codex`.
+AGENTS.md
+.codex/
+.agents/
+
+bun.lock

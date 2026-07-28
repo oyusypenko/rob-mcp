@@ -68,6 +68,30 @@ are `O-N` with owners.
   rob-surface; monetization shape.)_ Rate limiter runs before payment middleware; per-tool prices
   live in `src/pricing.ts` and `docs/developers/tools.md` only. Price changes append a `D-N`.
 
+### Tooling & harness
+
+- **D-9 — USER-DIRECTED: The repo is harness-portable; `.claude/**` is the single source and the
+  OpenAI Codex mirror is generated.** _(2026-07-28; owner rob-architect; repo tooling.)_ The repo
+  must be usable from Codex CLI as well as Claude Code, with **no duplicated content** (user
+  direction). Ruling: `.claude/**` + `.mcp.json` stay the only hand-edited harness files;
+  `scripts/sync-codex.ts` projects them onto `AGENTS.md`, `.codex/agents/*.toml`,
+  `.codex/hooks.json`, `.codex/config.toml`, and `.agents/skills/*`. Duplication is avoided
+  per asset class: skills are **symlinked** (one `SKILL.md` on disk), hook **scripts are shared
+  verbatim** (both harnesses feed the same stdin JSON and honour exit 2 as "block"; the scripts now
+  accept Claude's `Bash`/`file_path` shape and Codex's argv-array/`apply_patch`-patch-body shape),
+  and the only genuine copy is `AGENTS.md` — unavoidable because **Codex supports no `@`-imports**,
+  so the four always-on rules must be inlined. That copy is generated, banner-marked, and
+  drift-checked: `bun run sync-codex --check` is a `validate.sh` stage, so a stale mirror cannot be
+  committed. The generator asserts Codex's 32 KiB `project_doc_max_bytes` budget (currently ~14 KiB)
+  because Codex truncates the instruction chain **silently**. Claude's per-agent tool allowlists have
+  no Codex equivalent and are restated as prose in `developer_instructions` — a soft guarantee;
+  hard enforcement stays in the hooks, which fire in both harnesses. Verified empirically against
+  codex-cli 0.144.6 via `codex debug prompt-input`. Rationale: portability is a portfolio and
+  contributor concern (D-1), and a second hand-maintained rule set would drift out of sync —
+  which for `no-custody` is a safety regression, not an inconvenience. Runbook + portable recipe:
+  `docs/developers/runbooks/codex-parity.md`. Unchanged: Claude Code remains the primary harness
+  and the richer source; no rule text, agent remit, or skill content was altered by this change.
+
 ## Open items
 
 - **O-1** _(rob-core)_ — Verify DEX venues beyond Uniswap on-chain: Robinhood docs name

@@ -1,0 +1,41 @@
+{
+  "_generated": "by scripts/sync-codex.ts — DO NOT EDIT. Run `bun run sync-codex`.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "(?i)^(bash|shell|unified_exec|exec_command|local_shell)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'cd \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\" && exec ./.claude/hooks/protect-secrets.sh'",
+            "statusMessage": "rob-mcp: secret/destructive-command guard"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "(?i)^(apply_patch|write|edit|multiedit|edit_file|create_file)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'cd \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\" && exec ./.claude/hooks/check-hard-rules.sh'",
+            "statusMessage": "rob-mcp: hard-rule scan"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'cd \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\" && exec ./.claude/hooks/stop-typecheck.sh'",
+            "timeout": 240,
+            "statusMessage": "rob-mcp: typecheck"
+          }
+        ]
+      }
+    ]
+  }
+}

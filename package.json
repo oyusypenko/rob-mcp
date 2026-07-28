@@ -17,7 +17,8 @@
     "validate": "bash scripts/validate.sh",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "verify-tokens": "bun scripts/verify-tokens.ts"
+    "verify-tokens": "bun scripts/verify-tokens.ts",
+    "sync-codex": "bun scripts/sync-codex.ts"
   },
   "dependencies": {
     "@coinbase/x402": "2.1.0",

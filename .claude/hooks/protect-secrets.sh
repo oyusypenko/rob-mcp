@@ -1,16 +1,38 @@
 #!/usr/bin/env bash
-# PreToolUse guard for Bash: blocks reads of secret material and destructive
+# PreToolUse guard for shell tools: blocks reads of secret material and destructive
 # commands that the permission globs can't see inside a shell string. Exit 2
 # blocks the call and feeds the message back to the agent; exit 0 passes.
 # High-precision rules only — the committed .env.example stays fully accessible.
+#
+# Harness-agnostic (D-9): shared VERBATIM by Claude Code (.claude/settings.json) and Codex
+# (.codex/hooks.json). Claude's Bash tool passes tool_input.command as a STRING; Codex's shell
+# tools pass an argv ARRAY (e.g. ["bash","-lc","cat .env"]) — both are flattened to one line here.
 
 set -u
 input=$(cat)
 
 if command -v jq >/dev/null 2>&1; then
-  cmd=$(printf '%s' "$input" | jq -r '.tool_input.command // empty')
+  cmd=$(printf '%s' "$input" | jq -r '
+    [ .tool_input.command?, .tool_input.cmd?, .tool_input.script? ]
+    | map(select(. != null))
+    | map(if type == "array" then join(" ") else tostring end)
+    | join(" ")' 2>/dev/null)
 else
-  cmd=$(printf '%s' "$input" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("tool_input",{}).get("command",""))' 2>/dev/null)
+  cmd=$(printf '%s' "$input" | python3 -c '
+import json, sys
+try:
+    ti = json.load(sys.stdin).get("tool_input", {}) or {}
+except Exception:
+    sys.exit(0)
+parts = []
+for k in ("command", "cmd", "script"):
+    v = ti.get(k)
+    if isinstance(v, list):
+        parts.append(" ".join(str(x) for x in v))
+    elif v:
+        parts.append(str(v))
+print(" ".join(parts))
+' 2>/dev/null)
 fi
 [ -z "$cmd" ] && exit 0
 
