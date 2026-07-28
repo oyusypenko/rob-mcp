@@ -23,6 +23,19 @@ are `O-N` with owners.
   paywall on. Unscoped legacy `x402-*` packages banned (hook-enforced). Codified in
   `.claude/rules/versions-pinned.md`. Migration tracked as O-3.
 
+- **D-8 — USER-DIRECTED: The core is chain-agnostic; Robinhood Chain (4663) is the first and
+  default chain.** _(2026-07-28; owner rob-core; core/config shape — amends the 4663-specific
+  wording of the Phase-A docs.)_ No chain id, venue address, or issuer semantics may be assumed in
+  `src/core/` or `src/tools/`: chains are entries in `data/chains.json` (venues, oracle config,
+  issuer profile), token registries are per-chain (`data/tokens/<chainId>.json`), issuer
+  differences (ERC-8056 `uiMultiplier` vs other tokenized-equity issuers) live in issuer profiles
+  (`src/registry/issuer-profiles.ts`), the whale store is chain-keyed, and every tool takes an
+  optional `chain` input (default: first enabled chain) with `chainId` in every output's
+  provenance. Runtime chains come from `ENABLED_CHAINS` + `RPC_URL_<chainId>`; v1 enables 4663
+  only. Scope bound: EVM chains only (the stack is viem) — non-EVM (Solana xStocks) excluded.
+  Unchanged: x402 settlement stays on Base regardless of data chains; the trading wrapper stays
+  Robinhood-specific and local-only (D-6); pricing (D-7).
+
 ### Data & oracle
 
 - **D-3 — USER-DIRECTED: Chainlink-first oracle; off-chain quote API only as fallback.**

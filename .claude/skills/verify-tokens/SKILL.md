@@ -1,10 +1,11 @@
 ---
 name: verify-tokens
 description: >-
-  Runbook-skill for verifying the curated Stock Token registry (data/tokens.json) against live
-  Robinhood Chain (4663) state. Use when the user says "verify tokens", "check the registry",
-  "add a stock token", "tokens.json is stale", or after any edit to data/tokens.json. Read-only
-  against the chain; needs only RPC_URL_4663. Idempotent — safe to re-run any time.
+  Runbook-skill for verifying the curated per-chain token registries (data/tokens/<chainId>.json)
+  against live chain state — first chain: Robinhood (4663). Use when the user says "verify
+  tokens", "check the registry", "add a stock token", "the token registry is stale", or after any
+  edit under data/. Read-only against the chains; needs only the RPC_URL_<chainId> vars for
+  enabled chains. Idempotent — safe to re-run any time.
 ---
 
 # Verify & maintain the Stock Token registry
@@ -14,9 +15,11 @@ seeded, on-chain-verified; there is no public on-chain registry contract, open i
 `docs/developers/tools.md` (what registry fields the tools consume). Docs win over this skill;
 report drift.
 
-Stock Tokens are ERC-20 (18 decimals) + ERC-8056 (`uiMultiplier()`, `balanceOfUI()`). Chainlink
-tokenized-equity feeds on 4663 are 8-decimal USD and already include the `uiMultiplier` — a feed
-entry that needs multiplier math is a registry bug, not a tool bug.
+Issuer semantics come from the chain's issuer profile (`data/chains.json`). On 4663: Stock Tokens
+are ERC-20 (18 decimals) + ERC-8056 (`uiMultiplier()`, `balanceOfUI()`), and the Chainlink
+tokenized-equity feeds are 8-decimal USD and already include the `uiMultiplier` — a feed entry
+that needs multiplier math is a registry bug, not a tool bug. Other chains/issuers verify against
+their own profile's fields.
 
 ## Docs-first rule (mandatory, every run)
 
@@ -27,10 +30,11 @@ Robinhood Chain "Building with Stock Tokens" page (token contract listing).
 
 ## Invariants this skill will not violate
 
-- **Read-only.** No private key, no signing, no state change. The only env var referenced is
-  `RPC_URL_4663` (by name — never read a real `.env`).
-- **Nothing enters `data/tokens.json` unverified.** Every entry must pass the on-chain check below
-  before commit; a failing entry is removed or fixed, never waved through.
+- **Read-only.** No private key, no signing, no state change. The only env vars referenced are
+  the `RPC_URL_<chainId>` vars (by name — never read a real `.env`).
+- **Nothing enters a token registry unverified.** Every entry in every `data/tokens/<chainId>.json`
+  must pass the on-chain check below before commit; a failing entry is removed or fixed, never
+  waved through.
 - **No hardcoded market metrics** — the verify step sanity-checks that a feed ANSWERS, never
   asserts what the price should be.
 

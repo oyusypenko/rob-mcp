@@ -1,11 +1,13 @@
 # rob-mcp
 
-**MCP server + x402-paid API for Robinhood Chain tokenized stocks.**
+**MCP server + x402-paid API for tokenized stocks on EVM chains — starting with Robinhood Chain.**
 
-AI agents (Claude, ChatGPT, trading bots) call paid tools for the data that matters on
-Robinhood Chain (chain ID 4663): Stock Token premium/discount vs the Chainlink equity oracle,
-cross-DEX liquidity and spreads, whale transfers and mint/redeem flow — plus a local safety
-wrapper around Robinhood's official Trading MCP.
+AI agents (Claude, ChatGPT, trading bots) call paid tools for the data that matters on tokenized
+equities: premium/discount vs the Chainlink equity oracle, cross-DEX liquidity and spreads, whale
+transfers and mint/redeem flow — plus a local safety wrapper around Robinhood's official Trading
+MCP. The core is chain-agnostic; Robinhood Chain (chain ID 4663) is the first supported chain,
+with other tokenized-equity venues (Backed xStocks, Dinari dShares chains) addable as data +
+adapters.
 
 > **Status: pre-alpha.** Repo scaffold + project governance are in place; product code lands
 > per the phase plan in `docs/developers/architecture.md`.

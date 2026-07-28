@@ -1,8 +1,9 @@
 # rob-mcp — architecture
 
-MCP server + x402-paid API exposing Robinhood Chain (chain ID 4663) Stock Token data to AI agents.
-This document is the design authority for the system shape (spec-authority rule: docs win over
-code). Tool contract + pricing: `tools.md`. Decisions and open items: `design-decisions.md`.
+MCP server + x402-paid API exposing tokenized-equity ("stock token") data on EVM chains to AI
+agents. The core is **chain-agnostic** (D-8); **Robinhood Chain (4663) is the first and default
+chain**. This document is the design authority for the system shape (spec-authority rule: docs win
+over code). Tool contract + pricing: `tools.md`. Decisions and open items: `design-decisions.md`.
 
 ## One core, two surfaces
 
@@ -33,31 +34,58 @@ flowchart LR
   Streamable HTTP MCP + health + scanner head-follow); `scan` → whale backfill; `trade` → local
   trading wrapper (Phase F).
 
+## Chain-agnostic core (D-8)
+
+Nothing chain-specific lives in `src/core/` or `src/tools/` — chain identity is data + adapters:
+
+- **Chain registry** (`data/chains.json`, Zod-validated): one entry per supported chain — viem
+  chain definition inputs (id, name, native currency, explorer), venue addresses (Uniswap
+  v2/v3 factory/quoter per chain), oracle config (Chainlink aggregator style, sequencer-uptime
+  feed address if the chain is an L2), and the chain's **issuer profile** (below). Adding a chain
+  is a data + registry change plus at most a new adapter, never a core change.
+- **Issuer profiles** (`src/registry/issuer-profiles.ts`): tokenized equities differ per issuer —
+  Robinhood Stock Tokens are ERC-20 + ERC-8056 (`uiMultiplier()`, feed includes the multiplier);
+  other issuers (e.g. Backed xStocks, Dinari dShares on other EVM chains) have their own
+  extension/mint semantics. A profile encodes: optional multiplier semantics, mint/redeem
+  classification rules (zero-address + issuer/AP address sets), and feed-comparability rules. The
+  pure core consumes profile output, never issuer specifics.
+- **Scope: EVM only** — the whole stack is viem; non-EVM chains (e.g. Solana xStocks) are out of
+  scope for this codebase.
+- **Multi-chain runtime**: `ENABLED_CHAINS` (comma-separated ids) selects active chains; serve
+  mode builds one client + scanner per enabled chain. v1 ships with `4663` alone enabled; the
+  default chain for tools that omit `chain` is the first enabled chain.
+
 ## Chain layer
 
-- viem `PublicClient` with `defineChain(4663)` (testnet 46630), HTTP/WS transport switch,
-  multicall batching on by default (~100ms blocks make batching matter).
-- Config fails closed: Zod-parsed env (`loadConfig(env)`), startup aborts on missing/invalid vars,
-  `CHAIN_ID` asserted against live `eth_chainId` at boot.
-- Minimal inline ABIs (`src/chain/abi.ts`): ERC-20 + ERC-8056 (`uiMultiplier`, `balanceOfUI`),
-  `AggregatorV3Interface`, Uniswap v3 factory/pool/QuoterV2, Uniswap v2 factory/pair.
+- One viem `PublicClient` per enabled chain, built from the chain registry (`defineChain`),
+  HTTP/WS transport switch, multicall batching on by default (Robinhood's ~100ms blocks make
+  batching matter).
+- Config fails closed: Zod-parsed env (`loadConfig(env)`), startup aborts on missing/invalid vars;
+  every enabled chain's RPC (`RPC_URL_<chainId>`) is asserted against live `eth_chainId` at boot.
+- Minimal inline ABIs (`src/chain/abi.ts`): ERC-20 + optional issuer extensions (ERC-8056
+  `uiMultiplier`, `balanceOfUI`), `AggregatorV3Interface`, Uniswap v3 factory/pool/QuoterV2,
+  Uniswap v2 factory/pair.
 
 ## Token registry
 
-No public on-chain Stock Token registry exists (open item O-2) → curated `data/tokens.json`
-(address, ticker, name, Chainlink feed if any, known pools/venues), drafted by
-`scripts/seed-tokens.ts` (Robinhood docs token page + Chainlink address page) and gated by
-`scripts/verify-tokens.ts` (on-chain symbol/decimals/`uiMultiplier` + feed sanity). Nothing enters
-the registry unverified (`/verify-tokens` skill).
+No public on-chain stock-token registry exists on Robinhood (open item O-2) → curated per-chain
+token files `data/tokens/<chainId>.json` (address, ticker, name, issuer profile, Chainlink feed if
+any, known pools/venues), drafted by `scripts/seed-tokens.ts` (per-chain sources; for 4663 the
+Robinhood docs token page + Chainlink address page) and gated by `scripts/verify-tokens.ts`
+(on-chain symbol/decimals/profile fields + feed sanity, across all enabled chains). Nothing enters
+a registry unverified (`/verify-tokens` skill).
 
 ## Data flows
 
-- **Premium/discount** (`stock_premium`): DEX price (best pool for the pair) vs the Chainlink
-  tokenized-equity feed on 4663. The feed is 8-dec USD, updates 24/5, and **already includes the
-  token's `uiMultiplier`** — never re-apply it. Every read gates on feed staleness AND the L2
-  sequencer-uptime feed; output carries provenance (`oracleSource`, `oracleUpdatedAt`, pool).
-  Tickers without a feed fall back to an off-chain quote port (provider: open item O-6; stub in
-  Phase C).
+All tools take an optional `chain` (chain id) input, defaulting to the first enabled chain
+(Robinhood 4663 in v1); every output carries `chainId` in its provenance.
+
+- **Premium/discount** (`stock_premium`): DEX price (best pool for the pair) vs the chain's
+  Chainlink tokenized-equity feed. On 4663 the feed is 8-dec USD, updates 24/5, and **already
+  includes the token's `uiMultiplier`** — never re-apply it (feed-comparability comes from the
+  issuer profile). Every read gates on feed staleness AND, on L2s, the sequencer-uptime feed;
+  output carries provenance (`oracleSource`, `oracleUpdatedAt`, pool, `chainId`). Tickers without
+  a feed fall back to an off-chain quote port (provider: open item O-6; stub in Phase C).
 - **Liquidity/spread** (`stock_liquidity`, `stock_quote`): Uniswap v3 depth from tick data
   (documented approximation acceptable for v1), spread via QuoterV2 buy/sell round-trip of a
   canonical clip; v2 from pair reserves. Venue adapters are pluggable behind
@@ -65,17 +93,18 @@ the registry unverified (`/verify-tokens` skill).
   Arcus/Pleiades/Rialto/Lighter unverified as of 2026-07-28).
 - **Whale/mint-redeem** (`whale_activity`): chunked `eth_getLogs` Transfer scans (registry
   address list) against the archive RPC, adaptive range splitting on provider limits, persistent
-  resume cursor, reorg tail re-scan; head-follow poll loop in serve mode with graceful shutdown.
-  Classification is pure: `from == 0x0` → mint, `to == 0x0` → redeem, configured issuer/AP set →
-  AP flow, else whale when `amountUsd ≥ WHALE_MIN_USD` (priced via the oracle adapter).
+  resume cursor, reorg tail re-scan; head-follow poll loop per enabled chain in serve mode with
+  graceful shutdown. Classification is pure and issuer-profile-driven: `from == 0x0` → mint,
+  `to == 0x0` → redeem, the profile's issuer/AP address set → AP flow, else whale when
+  `amountUsd ≥ WHALE_MIN_USD` (priced via the oracle adapter).
 
 ## Storage
 
 SQLite via `bun:sqlite` (WAL, single writer = the scanner) behind a `WhaleStore` port — Postgres
-must remain a swap, not a rewrite (D-4). Schema:
-`events(token, block, logIndex, kind, from, to, amount, amountUsd, txHash, PRIMARY KEY(txHash, logIndex))`
-plus `cursor(token, lastBlock)`. The `bun:sqlite` import is guarded so stdio mode runs on plain
-Node (`npx rob-mcp`).
+must remain a swap, not a rewrite (D-4). Schema is chain-keyed:
+`events(chainId, token, block, logIndex, kind, from, to, amount, amountUsd, txHash, PRIMARY KEY(chainId, txHash, logIndex))`
+plus `cursor(chainId, token, lastBlock)`. The `bun:sqlite` import is guarded so stdio mode runs on
+plain Node (`npx rob-mcp`).
 
 ## Payments (x402)
 
@@ -121,8 +150,9 @@ facilitator unreachable). CI (GitHub Actions) runs `scripts/validate.sh`.
 
 - **A — governance scaffold** (this doc's commit): Claude Code setup, rules, agents, skills,
   hooks, docs. Gate: user review.
-- **B — scaffold + registry**: config/chain/registry + seed/verify scripts; stdio MCP boots with
-  `list_stock_tokens`.
+- **B — scaffold + registry**: config + the chain-agnostic chain registry (`data/chains.json`,
+  issuer profiles) + per-chain token registry + seed/verify scripts; stdio MCP boots with
+  `list_stock_tokens`. 4663 is the only entry, but nothing may assume it is.
 - **C — data core**: premium + liquidity/quotes end-to-end, free surfaces, fake-backed test suite.
 - **D — whale indexer**: scanner + SQLite store + `whale_activity`; 7-day mainnet backfill sanity.
 - **E — x402 + deploy**: paywall on both surfaces, Base Sepolia smoke (`/x402-smoke` skill), Fly

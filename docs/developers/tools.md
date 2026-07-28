@@ -18,9 +18,13 @@ via x402; networks per `architecture.md`.
 
 Semantics:
 
-- `ticker` accepts a registry ticker or a token address; resolution via `src/registry/`.
-- Every price-bearing output carries provenance (source, timestamp, pool/feed address) — a number
-  without provenance is a bug.
+- **Chain-agnostic (D-8)**: every tool additionally accepts `chain?: number` (an enabled chain
+  id), defaulting to the first enabled chain (Robinhood 4663 in v1). `list_stock_tokens` lists
+  across all enabled chains unless `chain` narrows it. Every output carries `chainId`.
+- `ticker` accepts a registry ticker or a token address; resolution via `src/registry/` within
+  the resolved chain.
+- Every price-bearing output carries provenance (source, timestamp, pool/feed address, chainId) —
+  a number without provenance is a bug.
 - Paid-tool inputs are bounded (max `sinceHours`, max `amountUsd`, result caps) — unbounded input
   driving RPC fan-out is a paid-DoS vector (rob-security surface #4).
 - `trade_*` tools never appear on hosted surfaces.
