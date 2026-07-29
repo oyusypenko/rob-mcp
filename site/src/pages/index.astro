@@ -29,10 +29,10 @@ import { manifest, path } from "../lib/site";
         <pre><code>{`{
   "mcpServers": {
     "rob-mcp": {
-      "command": "npx",
-      "args": ["-y", "rob-mcp"],
+      "command": "bun",
+      "args": ["/absolute/path/to/rob-mcp/src/cli.ts"],
       "env": {
-        "RPC_URL_4663": "\${RPC_URL_4663}"
+        "RPC_URL_4663": "https://your-rpc.example"
       }
     }
   }
@@ -79,7 +79,7 @@ import { manifest, path } from "../lib/site";
           <span class="number">01 / local</span>
           <h3>Bring your own RPC</h3>
           <p>
-            Run the stdio MCP locally with Bun or plain Node. No rob-mcp account and no payment.
+            Run the stdio MCP from a source checkout with Bun. No rob-mcp account and no payment.
           </p>
           <a href={path("/docs/getting-started/local/")}>Local quickstart</a>
         </article>

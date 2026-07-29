@@ -6,6 +6,7 @@ export interface DexPoolConfig {
   readonly venue: DexVenue;
   readonly pool: string;
   readonly feeTier?: number;
+  readonly tokenDecimals: number;
   readonly quoteAsset: {
     readonly symbol: string;
     readonly address: string;
@@ -30,9 +31,9 @@ export class RegistryDexPoolCatalog implements DexPoolCatalog {
 
   pools(chainId: number, tokenAddress: string, venue: DexVenue): readonly DexPoolConfig[] {
     const chain = this.chains.get(chainId);
-    return this.tokens
-      .resolve(chainId, tokenAddress)
-      .venues.filter((pool) => pool.venue === venue)
+    const token = this.tokens.resolve(chainId, tokenAddress);
+    return token.venues
+      .filter((pool) => pool.venue === venue)
       .map((pool) => {
         if (!pool.quoteToken) {
           throw new Error(`pool ${pool.pool} has no verified quote-token identity`);
@@ -47,6 +48,7 @@ export class RegistryDexPoolCatalog implements DexPoolCatalog {
           venue: pool.venue,
           pool: pool.pool,
           ...(pool.feeTier === undefined ? {} : { feeTier: pool.feeTier }),
+          tokenDecimals: token.decimals,
           quoteAsset,
         };
       });

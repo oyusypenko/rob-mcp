@@ -11,6 +11,7 @@ const tools = defineCollection({
     tier: z.enum(["free", "paid"]),
     price: z.string().nullable(),
     surfaces: z.array(z.enum(["hosted", "local"])),
+    errorCodes: z.array(z.string()),
     availability: z.enum(["implemented", "implemented-but-live-gated"]),
     gates: z.array(z.string()),
     inputSchema: z.record(z.string(), z.unknown()),

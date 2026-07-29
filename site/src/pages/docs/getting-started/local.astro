@@ -5,21 +5,24 @@ import CodeBlock from "../../../components/CodeBlock.astro";
 
 <DocLayout
   title="Local MCP quickstart"
-  description="Copy-paste setup for running rob-mcp as a free local stdio MCP server with Bun or plain Node and your own Robinhood Chain RPC."
+  description="Copy-paste setup for running rob-mcp from a source checkout as a free local stdio MCP server with Bun and your own Robinhood Chain RPC."
 >
   <p class="eyebrow">Getting started</p><h1>Run rob-mcp locally</h1>
   <p class="lede">
     Local stdio MCP is free. It talks directly to your configured RPC and does not use the hosted
     x402 paywall.
   </p>
-  <h2>1. Provide an RPC</h2>
+  <h2>1. Install from the source repository</h2>
   <CodeBlock
-    code={`export RPC_URL_4663="https://your-robinhood-chain-rpc.example"`}
-    label="Required environment"
+    code={`git clone https://github.com/oyusypenko/rob-mcp.git
+cd rob-mcp
+bun install --frozen-lockfile`}
+    label="Source checkout"
   />
-  <h2>2. Start the server</h2>
+  <h2>2. Provide an RPC and start the server</h2>
   <CodeBlock
-    code={`bunx rob-mcp\n# Plain Node is supported too:\nnpx -y rob-mcp`}
+    code={`export RPC_URL_4663="https://your-robinhood-chain-rpc.example"
+bun run dev`}
     label="Run stdio MCP"
   />
   <h2>3. Add it to your MCP client</h2>
@@ -27,10 +30,10 @@ import CodeBlock from "../../../components/CodeBlock.astro";
     code={`{
   "mcpServers": {
     "rob-mcp": {
-      "command": "npx",
-      "args": ["-y", "rob-mcp"],
+      "command": "bun",
+      "args": ["/absolute/path/to/rob-mcp/src/cli.ts"],
       "env": {
-        "RPC_URL_4663": "\${RPC_URL_4663}"
+        "RPC_URL_4663": "https://your-robinhood-chain-rpc.example"
       }
     }
   }
@@ -44,6 +47,7 @@ import CodeBlock from "../../../components/CodeBlock.astro";
     >. It is implemented, free, and does not require a price-liveness source.
   </p>
   <div class="callout">
-    The server verifies the RPC’s live chain ID at boot. A URL for the wrong chain fails closed.
+    The npm package is not published yet. Use the source-checkout commands above; the server
+    verifies the RPC’s live chain ID at boot and fails closed on a mismatch.
   </div>
 </DocLayout>

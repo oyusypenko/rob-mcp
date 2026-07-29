@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  BASE_MAINNET,
   BASE_SEPOLIA,
   facilitatorConfig,
   TESTNET_FACILITATOR_URL,
@@ -31,5 +32,16 @@ describe("Base Sepolia facilitator selection", () => {
     ).toEqual({
       url: "https://approved.example/facilitator",
     });
+  });
+
+  test("refuses Base mainnet even when CDP credentials are present while O-5 is unresolved", () => {
+    expect(() =>
+      facilitatorConfig({
+        ...baseConfig,
+        network: BASE_MAINNET,
+        cdpApiKeyId: "configured-but-gated",
+        cdpApiKeySecret: "configured-but-gated",
+      }),
+    ).toThrow("O-5");
   });
 });

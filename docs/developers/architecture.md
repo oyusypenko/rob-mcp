@@ -127,8 +127,10 @@ All tools take an optional `chain` (chain id) input, defaulting to the first ena
   `SEQUENCER_STATUS_UNAVAILABLE` until an official address is published and verified (O-8).
 - **Oracle pause gate (D-20)**: `oraclePaused` is internal and fail-closed. An explicit upstream
   halt/pause, stale/invalid price, or unavailable required source returns a typed error rather than
-  a number. Successful price-bearing outputs expose `oraclePaused: false` and
-  `sequencerOk: true`; callers cannot set either gate.
+  a number. Provider transport, RPC, non-success HTTP, and invalid/incomplete provider responses
+  return `ORACLE_SOURCE_UNAVAILABLE`; they never become generic transport details at the tool
+  surface. Successful price-bearing outputs expose `oraclePaused: false` and `sequencerOk: true`;
+  callers cannot set either gate.
 - **Liquidity/spread** (`stock_liquidity`, `stock_quote`): Uniswap v3 depth from tick data
   (documented approximation acceptable for v1), spread via QuoterV2 buy/sell round-trip of a
   `LIQUIDITY_CLIP_USD` probe; v2 from pair reserves. `stock_quote.amountUsd` is positive and at
@@ -155,8 +157,9 @@ must remain a swap, not a rewrite (D-4). Schema is chain-keyed:
 `events(chainId, token, block, blockTimestamp, logIndex, kind, from, to, amount, amountUsd, txHash, oracleSource, oracleUpdatedAt, oracleAddress, oracleProvider, PRIMARY KEY(chainId, txHash, logIndex))`
 plus `cursor(chainId, token, lastBlock)`. `blockTimestamp` is persisted at ingestion so
 `sinceHours` and result `time` do not cause per-row RPC calls; every stored `amountUsd` carries its
-event-time oracle provenance. The `bun:sqlite` import is guarded so stdio mode runs on plain Node
-(`npx rob-mcp`).
+event-time oracle provenance. The `bun:sqlite` import is guarded so stdio mode does not load the
+scanner store. Until the npm package is published, the supported local command is `bun run dev`
+from a source checkout.
 
 ## Payments (x402)
 

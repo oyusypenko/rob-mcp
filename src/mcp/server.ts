@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import type { Deps } from "../deps.js";
 import { PRICING, isPaidTool } from "../pricing.js";
+import { toolErrorPayload } from "../tools/definitions.js";
 import { definitionsForSurface, type ToolSurface } from "../tools/surfaces.js";
 import type { FreeCallLimiter } from "../http/rate-limit.js";
 import type { PaymentRuntime } from "../http/x402.js";
@@ -21,6 +22,7 @@ type ToolOutput = Record<string, unknown>;
 interface TextToolResult {
   [key: string]: unknown;
   content: Array<{ type: "text"; text: string }>;
+  isError?: boolean;
   structuredContent?: Record<string, unknown>;
 }
 
@@ -44,11 +46,20 @@ export async function createMcpServer(
   });
 
   for (const definition of toolDefinitions) {
-    const execute = async (input: Record<string, unknown>) => {
-      const parsedInput = definition.inputSchema.parse(input);
-      const output = await definition.handler(parsedInput, deps);
-      const parsedOutput = definition.outputSchema.parse(output) as ToolOutput;
-      return toToolResult(parsedOutput);
+    const execute = async (input: Record<string, unknown>): Promise<TextToolResult> => {
+      try {
+        const parsedInput = definition.inputSchema.parse(input);
+        const output = await definition.handler(parsedInput, deps);
+        const parsedOutput = definition.outputSchema.parse(output) as ToolOutput;
+        return toToolResult(parsedOutput);
+      } catch (error) {
+        const runtimeError = toolErrorPayload(error);
+        if (!runtimeError) throw error;
+        return {
+          isError: true,
+          content: [{ type: "text", text: JSON.stringify(runtimeError) }],
+        };
+      }
     };
 
     let callback: (input: Record<string, unknown>, extra: unknown) => Promise<CallToolResult>;

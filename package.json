@@ -24,7 +24,8 @@
     "site:data": "bun scripts/site-generate.ts",
     "site:dev": "bun run site:data && astro dev --root site",
     "site:build": "bun run site:data && astro build --root site",
-    "site:check": "bun run site:data && astro check --root site && astro build --root site && bun scripts/site-check.ts"
+    "site:check": "bun run site:data && astro check --root site && astro build --root site && bun scripts/site-check.ts",
+    "site:lighthouse": "lhci autorun --config=site/lighthouserc.json"
   },
   "dependencies": {
     "@coinbase/x402": "2.1.0",
@@ -42,10 +43,11 @@
   "devDependencies": {
     "@astrojs/check": "0.9.10",
     "@astrojs/sitemap": "3.7.3",
-    "@types/bun": "^1.3.0",
+    "@lhci/cli": "0.15.1",
+    "@types/bun": "1.3.14",
     "astro": "7.1.5",
-    "prettier": "^3.6.0",
+    "prettier": "3.9.6",
     "prettier-plugin-astro": "0.14.1",
-    "typescript": "^5.6.0"
+    "typescript": "5.9.3"
   }
 }

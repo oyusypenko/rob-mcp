@@ -246,6 +246,10 @@ h3 {
   background: var(--forest);
 }
 
+.dark .eyebrow {
+  color: var(--mint);
+}
+
 .section-head {
   display: flex;
   align-items: end;
@@ -285,10 +289,14 @@ h3 {
 }
 
 .number {
-  color: var(--mint);
+  color: #245143;
   font:
     700 0.82rem ui-monospace,
     monospace;
+}
+
+.dark .number {
+  color: var(--mint);
 }
 
 .status {

@@ -6,6 +6,7 @@ import type { RoutesConfig } from "@x402/core/http";
 import { ExactEvmScheme } from "@x402/evm/exact/server";
 
 import type { Deps } from "../src/deps.js";
+import { OracleSafetyError } from "../src/core/oracle.js";
 import { createHttpApp } from "../src/http/app.js";
 import { createFreeCallLimiter } from "../src/http/rate-limit.js";
 import { PaymentReplayGuard } from "../src/http/payment-replay.js";
@@ -93,6 +94,39 @@ function fakePayment(): PaymentRuntime {
   };
 }
 
+function runtimeErrorDeps(): Deps {
+  return {
+    ...fakeDeps(),
+    config: {
+      defaultChainId: 7,
+      liquidityClipUsd: 100,
+      maxQuoteUsd: 50,
+    },
+    oracle: {
+      async getPrice() {
+        return {
+          chainId: 7,
+          priceUsd: 100,
+          oracleSource: "chainlink",
+          oracleUpdatedAt: "2026-07-29T00:00:00.000Z",
+          oracleAddress: "0x0000000000000000000000000000000000000008",
+          oraclePaused: false,
+          sequencerOk: true,
+        };
+      },
+    },
+    dex: {
+      async quote() {
+        return [];
+      },
+      async liquidity() {
+        return [];
+      },
+    },
+    now: () => new Date("2026-07-29T00:00:00.000Z"),
+  } as unknown as Deps;
+}
+
 describe("generated surfaces", () => {
   test("serves health and the canonical free HTTP tool route", async () => {
     const app = createHttpApp({
@@ -174,6 +208,116 @@ describe("generated surfaces", () => {
       ],
     });
 
+    await client.close();
+    await server.close();
+  });
+
+  test("preserves typed runtime errors across HTTP and MCP", async () => {
+    const deps = runtimeErrorDeps();
+    const app = createHttpApp({
+      deps,
+      payment: fakePayment(),
+      freeCalls: createFreeCallLimiter({ callsPerDay: 2 }),
+      trustedProxy: "none",
+      maxRequestBodyBytes: 65_536,
+      async health() {
+        return { status: "ok" };
+      },
+    });
+    const response = await app.request(
+      "/api/v1/tools/stock_premium",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ticker: "AAA", chain: 7 }),
+      },
+      { directIp: "127.0.0.1" },
+    );
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({
+      error: "NO_VERIFIED_POOL",
+      message: "no verified pool is registered for AAA",
+    });
+
+    const limitResponse = await app.request(
+      "/api/v1/tools/stock_quote",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ticker: "AAA", side: "buy", amountUsd: 51, chain: 7 }),
+      },
+      { directIp: "127.0.0.1" },
+    );
+    expect(limitResponse.status).toBe(422);
+    expect(await limitResponse.json()).toEqual({
+      error: "CONFIGURED_LIMIT_EXCEEDED",
+      message: "amountUsd exceeds configured maximum 50",
+    });
+
+    const oracleUnavailableDeps = {
+      ...deps,
+      oracle: {
+        async getPrice() {
+          throw new OracleSafetyError(
+            "ORACLE_SOURCE_UNAVAILABLE",
+            "Chainlink reference source is unavailable for AAA",
+          );
+        },
+      },
+    } as Deps;
+    const oracleApp = createHttpApp({
+      deps: oracleUnavailableDeps,
+      payment: fakePayment(),
+      freeCalls: createFreeCallLimiter({ callsPerDay: 1 }),
+      trustedProxy: "none",
+      maxRequestBodyBytes: 65_536,
+      async health() {
+        return { status: "ok" };
+      },
+    });
+    const oracleResponse = await oracleApp.request(
+      "/api/v1/tools/stock_premium",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ticker: "AAA", chain: 7 }),
+      },
+      { directIp: "127.0.0.1" },
+    );
+    expect(oracleResponse.status).toBe(503);
+    expect(await oracleResponse.json()).toEqual({
+      error: "ORACLE_SOURCE_UNAVAILABLE",
+      message: "Chainlink reference source is unavailable for AAA",
+    });
+
+    const server = await createMcpServer(oracleUnavailableDeps);
+    const client = new Client({ name: "surface-error-test", version: "1.0.0" });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+    const result = await client.callTool({
+      name: "stock_premium",
+      arguments: { ticker: "AAA", chain: 7 },
+    });
+    expect(result.isError).toBe(true);
+    const content = result.content;
+    if (!Array.isArray(content)) {
+      throw new Error("expected MCP error content");
+    }
+    const errorContent: unknown = content[0];
+    if (
+      typeof errorContent !== "object" ||
+      errorContent === null ||
+      !("type" in errorContent) ||
+      errorContent.type !== "text" ||
+      !("text" in errorContent) ||
+      typeof errorContent.text !== "string"
+    ) {
+      throw new Error("expected a text MCP error result");
+    }
+    expect(JSON.parse(errorContent.text)).toEqual({
+      error: "ORACLE_SOURCE_UNAVAILABLE",
+      message: "Chainlink reference source is unavailable for AAA",
+    });
     await client.close();
     await server.close();
   });

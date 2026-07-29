@@ -29,6 +29,7 @@ const v2Pools: DexPoolCatalog = {
     {
       venue: "univ2",
       pool,
+      tokenDecimals: 18,
       quoteAsset: {
         symbol: "USDG",
         address: quote,
@@ -60,6 +61,7 @@ const v3Pools: DexPoolCatalog = {
       venue: "univ3",
       pool,
       feeTier: 500,
+      tokenDecimals: 18,
       quoteAsset: {
         symbol: "USDG",
         address: quote,
@@ -144,5 +146,96 @@ describe("Uniswap adapters", () => {
     });
     expect(liquidity[0]?.feeTier).toBe(500);
     expect(liquidity[0]?.buyDepthUsd).toBeGreaterThan(0);
+  });
+
+  test("uses registry-provided token decimals across v2 and v3", async () => {
+    const eightDecimalV2Pools: DexPoolCatalog = {
+      pools: () => [
+        {
+          venue: "univ2",
+          pool,
+          tokenDecimals: 8,
+          quoteAsset: v2Pools.pools(1, token, "univ2")[0]!.quoteAsset,
+        },
+      ],
+    };
+    const eightDecimalV2Reader: UniswapV2Reader = {
+      async readPool() {
+        return {
+          token0: token,
+          token1: quote,
+          reserve0: 1_000n * 10n ** 8n,
+          reserve1: 100_000n * 10n ** 6n,
+        };
+      },
+    };
+    const v2 = new UniswapV2Adapter({
+      pools: eightDecimalV2Pools,
+      reader: eightDecimalV2Reader,
+      oracle,
+      spreadClipUsd: 100,
+      now: fixedClock("2026-07-29T00:00:00.000Z"),
+    });
+    const v2Liquidity = await v2.liquidity({
+      chainId: 1,
+      tokenAddress: token,
+      depthPct: 1,
+    });
+    expect(v2Liquidity[0]?.tvlToken).toBeCloseTo(1_000);
+    expect(v2Liquidity[0]?.tvlQuote).toBeCloseTo(100_000);
+
+    const observedInputs: bigint[] = [];
+    const eightDecimalV3Reader: UniswapV3Reader = {
+      async readPool() {
+        return {
+          token0: token,
+          token1: quote,
+          sqrtPriceX96: 2n ** 96n,
+          liquidity: 1n,
+        };
+      },
+      async quoteExactInputSingle(input) {
+        observedInputs.push(input.amountIn);
+        return input.tokenIn.toLowerCase() === quote.toLowerCase()
+          ? 1n * 10n ** 8n
+          : 100n * 10n ** 6n;
+      },
+    };
+    const eightDecimalV3Pools: DexPoolCatalog = {
+      pools: () => [
+        {
+          venue: "univ3",
+          pool,
+          feeTier: 500,
+          tokenDecimals: 8,
+          quoteAsset: v3Pools.pools(1, token, "univ3")[0]!.quoteAsset,
+        },
+      ],
+    };
+    const v3 = new UniswapV3Adapter({
+      pools: eightDecimalV3Pools,
+      reader: eightDecimalV3Reader,
+      oracle,
+      quoterByChain: new Map([[1, "0x0000000000000000000000000000000000000050"]]),
+      spreadClipUsd: 100,
+      now: fixedClock("2026-07-29T00:00:00.000Z"),
+    });
+    const [buy] = await v3.quote({
+      chainId: 1,
+      tokenAddress: token,
+      side: "buy",
+      amountUsd: 100,
+      referencePriceUsd: 100,
+    });
+    const [sell] = await v3.quote({
+      chainId: 1,
+      tokenAddress: token,
+      side: "sell",
+      amountUsd: 100,
+      referencePriceUsd: 100,
+    });
+    expect(observedInputs).toEqual([100n * 10n ** 6n, 1n * 10n ** 8n]);
+    expect(buy?.effectivePriceUsd).toBeCloseTo(100);
+    expect(sell?.effectivePriceUsd).toBeCloseTo(100);
   });
 });

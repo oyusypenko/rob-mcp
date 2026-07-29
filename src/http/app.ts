@@ -6,6 +6,7 @@ import { ZodError, z } from "zod";
 
 import type { Deps } from "../deps.js";
 import { isPaidTool, toolHttpPath } from "../pricing.js";
+import { toolErrorPayload } from "../tools/definitions.js";
 import { definitionsForSurface } from "../tools/surfaces.js";
 import { handleMcpHttpRequest } from "../mcp/http.js";
 import { bodyErrorResponse, readBoundedBody, RequestBodyError } from "./body.js";
@@ -157,6 +158,13 @@ export function createHttpApp(options: CreateHttpAppOptions) {
               details: error instanceof ZodError ? error.issues : undefined,
             },
             400,
+          );
+        }
+        const runtimeError = toolErrorPayload(error);
+        if (runtimeError) {
+          return context.json(
+            runtimeError,
+            runtimeError.error === "CONFIGURED_LIMIT_EXCEEDED" ? 422 : 503,
           );
         }
         throw error;

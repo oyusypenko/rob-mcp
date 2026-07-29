@@ -24,8 +24,9 @@ premium vs Chainlink oracle, cross-DEX liquidity/spreads, whale + mint/redeem fl
 exposed as:
 (a) a **Hono JSON API** (`POST /api/v1/tools/<tool-name>`) paywalled per-call with x402 (USDC on
 Base) — what x402 Bazaar lists;
-(b) an **MCP server** — free local stdio (`bunx rob-mcp`, BYO-RPC) and hosted Streamable HTTP with
-x402-paid tools. Plus a **local-only** trading wrapper around the user's own Robinhood Trading MCP.
+(b) an **MCP server** — free local stdio (`bun run dev` from a source checkout until npm
+publication, BYO-RPC) and hosted Streamable HTTP with x402-paid tools. Plus a **local-only**
+trading wrapper around the user's own Robinhood Trading MCP.
 `src/tools/definitions.ts` is the single source of truth feeding both surfaces; the one `PRICING`
 map drives both paywalls. Full design: `docs/developers/architecture.md`; tool contract:
 `docs/developers/tools.md`.

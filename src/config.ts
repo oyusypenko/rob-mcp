@@ -123,12 +123,8 @@ export function loadConfig(env: Environment, mode: RuntimeMode = "stdio"): Confi
   if (mode === "serve" && !parsed.X402_PAY_TO) {
     throw new Error("X402_PAY_TO is required in serve mode");
   }
-  if (
-    mode === "serve" &&
-    parsed.X402_NETWORK === "eip155:8453" &&
-    (!parsed.CDP_API_KEY_ID || !parsed.CDP_API_KEY_SECRET)
-  ) {
-    throw new Error("CDP_API_KEY_ID and CDP_API_KEY_SECRET are required for Base mainnet");
+  if (mode === "serve" && parsed.X402_NETWORK === "eip155:8453") {
+    throw new Error("Base mainnet payments are blocked until the O-5 compliance decision resolves");
   }
 
   const defaultChainId = enabledChains[0];

@@ -57,8 +57,10 @@ do not exist until Phase G implementation):
 - `site:build` — regenerate, validate derivation, and create static output.
 - `site:check` — validate links, snippets, metadata, accessibility, structured data, pricing
   parity, and performance budgets without deploying.
+- `site:lighthouse` — serve the built site in the controlled profile and enforce the representative
+  performance, accessibility, best-practices, and SEO thresholds.
 
-`bun run validate` must run `site:check` once the site lands.
+`bun run validate` runs `site:check` everywhere and `site:lighthouse` in CI.
 
 ## Information architecture
 
@@ -66,8 +68,9 @@ do not exist until Phase G implementation):
   provenance and no-custody trust signals; primary quickstart calls to action.
 - `/docs/` — documentation overview and concepts: one core/two surfaces, registries, provenance,
   liveness, free tier, and x402.
-- `/docs/getting-started/local/` — copy-paste `bunx` and `npx` stdio MCP setup, required RPC
-  configuration, client configuration examples, and a first `list_stock_tokens` call.
+- `/docs/getting-started/local/` — copy-paste source-checkout + Bun stdio MCP setup until the npm
+  package is published, required RPC configuration, client configuration examples, and a first
+  `list_stock_tokens` call. Published-package commands may appear only after the package exists.
 - `/docs/getting-started/hosted/` — hosted MCP and JSON API connection, free discovery, testnet
   x402 prerequisites, and a first paid call. Use `$ROB_MCP_URL`, never a fictitious production
   host.

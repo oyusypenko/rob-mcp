@@ -46,6 +46,19 @@ Semantics:
 - `position_check`, `trade_prepare`, and `trade_execute` never appear on hosted surfaces; their
   upstream connector mapping remains gated on O-9.
 
+### Runtime error contract
+
+Availability and operator-limit failures are part of each canonical tool definition through its
+`errorCodes` field. HTTP preserves them as `{ error, message }`: configured operator-bound
+violations use status 422 and unavailable pool, scanner, oracle, or sequencer state uses status 503. MCP preserves the same JSON envelope in a text content item with `isError: true`. Unexpected
+exceptions remain generic HTTP 500/MCP failures and never expose stack traces.
+
+The declared runtime-code vocabulary is `NO_VERIFIED_POOL`, `SCANNER_UNAVAILABLE`,
+`CONFIGURED_LIMIT_EXCEEDED`, `INVALID_ORACLE_ROUND`, `STALE_ORACLE_ROUND`, `ORACLE_PAUSED`,
+`ORACLE_SOURCE_UNAVAILABLE`, `SEQUENCER_STATUS_UNAVAILABLE`, `SEQUENCER_DOWN`, and
+`SEQUENCER_GRACE_PERIOD`. A tool reference page derives its applicable subset from
+`src/tools/definitions.ts`; copy must not maintain a second handwritten error list.
+
 ## HTTP routes
 
 The Hono surface derives exactly one route per hosted tool from the canonical definition:

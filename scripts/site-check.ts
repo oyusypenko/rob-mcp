@@ -104,6 +104,43 @@ for (const header of ["PAYMENT-REQUIRED", "PAYMENT-SIGNATURE", "PAYMENT-RESPONSE
   }
 }
 
+for (const tool of manifest.tools) {
+  const page = await readFile(routeFile(`/docs/tools/${tool.name}/`), "utf8");
+  for (const errorCode of tool.errorCodes) {
+    if (!page.includes(errorCode)) {
+      throw new Error(`${tool.name} guide is missing runtime error code ${errorCode}`);
+    }
+  }
+}
+
+const localGuide = await readFile(routeFile("/docs/getting-started/local/"), "utf8");
+for (const unpublishedCommand of ["npx rob-mcp", "bunx rob-mcp"]) {
+  if (localGuide.includes(unpublishedCommand)) {
+    throw new Error(`local guide advertises unpublished command: ${unpublishedCommand}`);
+  }
+}
+
+const publicationSensitiveSources = await Promise.all(
+  ["README.md", "CLAUDE.md", "docs/developers/architecture.md", "docs/developers/site.md"].map(
+    async (path) => ({ path, content: await readFile(resolve(root, path), "utf8") }),
+  ),
+);
+for (const { path, content } of publicationSensitiveSources) {
+  for (const unpublishedCommand of ["npx rob-mcp", "bunx rob-mcp"]) {
+    if (content.includes(unpublishedCommand)) {
+      throw new Error(`${path} advertises unpublished command: ${unpublishedCommand}`);
+    }
+  }
+}
+const readme = publicationSensitiveSources.find(({ path }) => path === "README.md")!.content;
+if (
+  readme.includes("X402_SMOKE_BASE_URL") ||
+  !readme.includes('SMOKE_TEST_BASE_URL="http://127.0.0.1:8402"') ||
+  !readme.includes('FREE_CALLS_PER_DAY="2" \\\n  bun scripts/x402-smoke.ts challenge')
+) {
+  throw new Error("README x402 challenge command has drifted from the smoke runner environment");
+}
+
 for (const assetType of [
   { files: cssFiles, limit: 50 * 1024, label: "CSS" },
   { files: jsFiles, limit: 100 * 1024, label: "client JavaScript" },

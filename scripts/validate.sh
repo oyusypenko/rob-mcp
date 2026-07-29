@@ -84,6 +84,11 @@ elif [ ! -d site ]; then
   skip "site not implemented"
 else
   bun run --silent site:check || fail=1
+  if [ "${CI:-}" = "true" ]; then
+    bun run --silent site:lighthouse || fail=1
+  else
+    skip "Lighthouse runs in the controlled CI profile (run bun site:lighthouse locally)"
+  fi
 fi
 
 printf '\n'

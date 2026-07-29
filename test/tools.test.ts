@@ -177,7 +177,10 @@ describe("tool definitions", () => {
     const runtime = dataDeps();
     await expect(
       stockQuoteDefinition.handler({ ticker: "AAA", side: "buy", amountUsd: 1_001 }, runtime),
-    ).rejects.toThrow("configured maximum");
+    ).rejects.toMatchObject({
+      code: "CONFIGURED_LIMIT_EXCEEDED",
+      message: expect.stringContaining("configured maximum"),
+    });
 
     const emptyDex: DexRegistryPort = {
       ...dex,
@@ -232,8 +235,11 @@ describe("tool definitions", () => {
     expect(result.scannedThrough).toBe("456");
     expect(whaleActivityDefinition.outputSchema.parse(result)).toEqual(result);
 
-    await expect(whaleActivityDefinition.handler({ sinceHours: 169 }, runtime)).rejects.toThrow(
-      "configured maximum",
-    );
+    await expect(
+      whaleActivityDefinition.handler({ sinceHours: 169 }, runtime),
+    ).rejects.toMatchObject({
+      code: "CONFIGURED_LIMIT_EXCEEDED",
+      message: expect.stringContaining("configured maximum"),
+    });
   });
 });

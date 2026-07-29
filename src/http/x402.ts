@@ -1,4 +1,3 @@
-import { createFacilitatorConfig } from "@coinbase/x402";
 import type { RoutesConfig } from "@x402/core/http";
 import { HTTPFacilitatorClient, x402ResourceServer } from "@x402/core/server";
 import type { Network } from "@x402/core/types";
@@ -34,10 +33,7 @@ export interface PaymentRuntime {
 
 export function facilitatorConfig(config: X402Config) {
   if (config.network === BASE_MAINNET) {
-    if (!config.cdpApiKeyId || !config.cdpApiKeySecret) {
-      throw new Error("CDP facilitator credentials are required on Base mainnet");
-    }
-    return createFacilitatorConfig(config.cdpApiKeyId, config.cdpApiKeySecret);
+    throw new Error("Base mainnet payments are blocked until the O-5 compliance decision resolves");
   }
 
   return {

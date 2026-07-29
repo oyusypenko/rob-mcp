@@ -14,9 +14,13 @@ import CodeBlock from "../../components/CodeBlock.astro";
   </p>
   <h2>Local stdio</h2>
   <CodeBlock
-    code={`export RPC_URL_4663="https://your-robinhood-chain-rpc.example"\nnpx -y rob-mcp`}
+    code={`git clone https://github.com/oyusypenko/rob-mcp.git
+cd rob-mcp
+bun install --frozen-lockfile
+export RPC_URL_4663="https://your-robinhood-chain-rpc.example"
+bun run dev`}
   />
-  <p>Local mode is free, starts a plain stdio MCP server, and runs on Bun or plain Node.</p>
+  <p>Local mode is free and starts a plain stdio MCP server with Bun.</p>
   <h2>Hosted Streamable HTTP</h2>
   <CodeBlock
     code={`export ROB_MCP_URL="https://your-deployment.example"\n# MCP endpoint: $ROB_MCP_URL/mcp`}
@@ -29,6 +33,8 @@ import CodeBlock from "../../components/CodeBlock.astro";
   <p>
     Outputs follow each tool’s generated object schema. Input validation, unavailable pools,
     unavailable scanner state, and fail-closed oracle/liveness gates are returned as typed tool
-    errors instead of plausible-looking data.
+    errors instead of plausible-looking data. Runtime failures set <code>isError: true</code> and put
+    the same <code>{'{ "error": "CODE", "message": "…" }'}</code> envelope used by HTTP in a text content
+    item.
   </p>
 </DocLayout>

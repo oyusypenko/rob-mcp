@@ -35,6 +35,11 @@ import CodeBlock from "../../components/CodeBlock.astro";
       <strong>Typed runtime error:</strong> a pool, scanner, oracle, or liveness requirement is unavailable.
     </li>
   </ul>
+  <p>
+    Typed runtime failures use <code>{'{ "error": "CODE", "message": "…" }'}</code>. A configured
+    operator-limit violation returns 422; unavailable runtime dependencies return 503. Each
+    generated tool page lists only the codes that tool can produce.
+  </p>
   <h2>Provenance</h2>
   <p>
     Market-derived values include their chain and source time plus oracle, feed, provider, pool, and

@@ -160,7 +160,7 @@ export class UniswapV3Adapter implements DexPort {
           sqrtPriceX96: state.sqrtPriceX96,
           liquidity: state.liquidity,
           tokenIsToken0,
-          tokenDecimals: 18,
+          tokenDecimals: pool.tokenDecimals,
           quoteDecimals: pool.quoteAsset.decimals,
           depthPct: input.depthPct,
         });
@@ -234,7 +234,7 @@ export class UniswapV3Adapter implements DexPort {
     const amountIn =
       input.side === "buy"
         ? toUnits(input.amountUsd / quotePrice.priceUsd, pool.quoteAsset.decimals)
-        : toUnits(tokenAmount!, 18);
+        : toUnits(tokenAmount!, pool.tokenDecimals);
     const amountOut = await this.input.reader.quoteExactInputSingle({
       chainId: input.chainId,
       quoter: this.quoter(input.chainId),
@@ -245,7 +245,7 @@ export class UniswapV3Adapter implements DexPort {
     });
     const effectivePriceUsd =
       input.side === "buy"
-        ? input.amountUsd / fromUnits(amountOut, 18)
+        ? input.amountUsd / fromUnits(amountOut, pool.tokenDecimals)
         : (fromUnits(amountOut, pool.quoteAsset.decimals) * quotePrice.priceUsd) / tokenAmount!;
     return {
       chainId: input.chainId,

@@ -88,4 +88,19 @@ describe("loadConfig", () => {
 
     expect(config.x402.facilitatorUrl).toBe("https://approved.example/facilitator");
   });
+
+  test("fails closed on Base mainnet while O-5 is unresolved", () => {
+    expect(() =>
+      loadConfig(
+        {
+          ...baseEnv,
+          X402_PAY_TO: "0x0000000000000000000000000000000000000001",
+          X402_NETWORK: "eip155:8453",
+          CDP_API_KEY_ID: "configured-but-gated",
+          CDP_API_KEY_SECRET: "configured-but-gated",
+        },
+        "serve",
+      ),
+    ).toThrow("O-5");
+  });
 });

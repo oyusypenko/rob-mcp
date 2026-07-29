@@ -96,6 +96,34 @@ describe("oracle adapters", () => {
     });
   });
 
+  test("maps Chainlink provider failures to a typed source-unavailable error", async () => {
+    const failingReader: ChainlinkReader = {
+      ...reader,
+      async readRound() {
+        throw new Error("provider connection reset");
+      },
+    };
+    const adapter = new ChainlinkOracleAdapter({
+      chains: chains(sequencer),
+      reader: failingReader,
+      sequencerGracePeriodSeconds: 60,
+      now,
+    });
+
+    await expect(
+      adapter.getPrice({
+        chainId: 1,
+        ticker: "TEST",
+        tokenAddress: token,
+        feed,
+        feedHeartbeatSeconds: 30,
+      }),
+    ).rejects.toMatchObject({
+      code: "ORACLE_SOURCE_UNAVAILABLE",
+      message: "Chainlink reference source is unavailable for TEST",
+    });
+  });
+
   test("fallback uses exact midpoint and issuer multiplier provenance", async () => {
     const responses = new Map<string, unknown>([
       [
@@ -151,6 +179,26 @@ describe("oracle adapters", () => {
       multiplier: "0.250000000000000000",
       oracleUpdatedAt: "2026-07-29T11:59:50.000Z",
       sequencerOk: true,
+    });
+  });
+
+  test("maps Robinhood transport failures to a typed source-unavailable error", async () => {
+    const adapter = new RobinhoodFallbackOracleAdapter({
+      assertSequencerUsable: async () => true,
+      maxAgeSeconds: 30,
+      now,
+      fetch: async () => new Response("unavailable", { status: 503 }),
+    });
+
+    await expect(
+      adapter.getPrice({
+        chainId: 1,
+        ticker: "TEST",
+        tokenAddress: token,
+      }),
+    ).rejects.toMatchObject({
+      code: "ORACLE_SOURCE_UNAVAILABLE",
+      message: "Robinhood reference source is unavailable for TEST",
     });
   });
 });

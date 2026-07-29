@@ -1,6 +1,6 @@
 import { z, type ZodType } from "zod";
 import { rankQuotes } from "../core/liquidity";
-import { calculatePremium } from "../core/oracle";
+import { calculatePremium, OracleSafetyError, type OracleSafetyCode } from "../core/oracle";
 import type { Deps } from "../deps";
 
 export type ToolTier = "free" | "paid";
@@ -9,11 +9,25 @@ export class DataToolError extends Error {
   override readonly name = "DataToolError";
 
   constructor(
-    readonly code: "NO_VERIFIED_POOL" | "SCANNER_UNAVAILABLE",
+    readonly code: "NO_VERIFIED_POOL" | "SCANNER_UNAVAILABLE" | "CONFIGURED_LIMIT_EXCEEDED",
     message: string,
   ) {
     super(message);
   }
+}
+
+export type ToolRuntimeErrorCode = DataToolError["code"] | OracleSafetyCode;
+
+export interface ToolErrorPayload {
+  readonly error: ToolRuntimeErrorCode;
+  readonly message: string;
+}
+
+export function toolErrorPayload(error: unknown): ToolErrorPayload | null {
+  if (error instanceof DataToolError || error instanceof OracleSafetyError) {
+    return { error: error.code, message: error.message };
+  }
+  return null;
 }
 
 export interface ToolDefinition<
@@ -27,6 +41,7 @@ export interface ToolDefinition<
   readonly outputSchema: TOutputSchema;
   readonly tier: ToolTier;
   readonly surfaces: readonly ("hosted" | "local")[];
+  readonly errorCodes: readonly ToolRuntimeErrorCode[];
   readonly handler: (input: z.infer<TInputSchema>, deps: Deps) => Promise<z.infer<TOutputSchema>>;
 }
 
@@ -59,6 +74,7 @@ export const listStockTokensDefinition = {
   outputSchema: listStockTokensOutputSchema,
   tier: "free",
   surfaces: ["hosted", "local"],
+  errorCodes: [],
   handler: async (input, deps) => ({
     tokens: deps.tokenRegistry.list(input),
   }),
@@ -71,6 +87,15 @@ const chainInput = {
 const venueSchema = z.enum(["univ2", "univ3"]);
 const venueSelectorSchema = z.enum(["univ2", "univ3", "best"]);
 const oracleSourceSchema = z.enum(["chainlink", "fallback"]);
+const oracleSafetyCodes = [
+  "INVALID_ORACLE_ROUND",
+  "STALE_ORACLE_ROUND",
+  "ORACLE_PAUSED",
+  "ORACLE_SOURCE_UNAVAILABLE",
+  "SEQUENCER_STATUS_UNAVAILABLE",
+  "SEQUENCER_DOWN",
+  "SEQUENCER_GRACE_PERIOD",
+] as const satisfies readonly OracleSafetyCode[];
 
 const livePriceProvenanceShape = {
   chainId: z.number().int().positive(),
@@ -109,6 +134,7 @@ export const stockPremiumDefinition = {
   outputSchema: stockPremiumOutputSchema,
   tier: "paid",
   surfaces: ["hosted", "local"],
+  errorCodes: [...oracleSafetyCodes, "NO_VERIFIED_POOL"],
   handler: async (input, deps) => {
     const chainId = input.chain ?? deps.config.defaultChainId;
     const token = deps.tokenRegistry.resolve(chainId, input.ticker);
@@ -185,6 +211,7 @@ export const stockLiquidityDefinition = {
   outputSchema: stockLiquidityOutputSchema,
   tier: "paid",
   surfaces: ["hosted", "local"],
+  errorCodes: oracleSafetyCodes,
   handler: async (input, deps) => {
     const chainId = input.chain ?? deps.config.defaultChainId;
     const token = deps.tokenRegistry.resolve(chainId, input.ticker);
@@ -238,9 +265,13 @@ export const stockQuoteDefinition = {
   outputSchema: stockQuoteOutputSchema,
   tier: "paid",
   surfaces: ["hosted", "local"],
+  errorCodes: [...oracleSafetyCodes, "NO_VERIFIED_POOL", "CONFIGURED_LIMIT_EXCEEDED"],
   handler: async (input, deps) => {
     if (input.amountUsd > deps.config.maxQuoteUsd) {
-      throw new Error(`amountUsd exceeds configured maximum ${deps.config.maxQuoteUsd}`);
+      throw new DataToolError(
+        "CONFIGURED_LIMIT_EXCEEDED",
+        `amountUsd exceeds configured maximum ${deps.config.maxQuoteUsd}`,
+      );
     }
     const chainId = input.chain ?? deps.config.defaultChainId;
     const token = deps.tokenRegistry.resolve(chainId, input.ticker);
@@ -313,15 +344,22 @@ export const whaleActivityDefinition = {
   outputSchema: whaleActivityOutputSchema,
   tier: "paid",
   surfaces: ["hosted", "local"],
+  errorCodes: ["SCANNER_UNAVAILABLE", "CONFIGURED_LIMIT_EXCEEDED"],
   handler: async (input, deps) => {
     if (!deps.whaleStore) {
       throw new DataToolError("SCANNER_UNAVAILABLE", "whale index is unavailable in this runtime");
     }
     if (input.sinceHours !== undefined && input.sinceHours > deps.config.maxWhaleSinceHours) {
-      throw new Error(`sinceHours exceeds configured maximum ${deps.config.maxWhaleSinceHours}`);
+      throw new DataToolError(
+        "CONFIGURED_LIMIT_EXCEEDED",
+        `sinceHours exceeds configured maximum ${deps.config.maxWhaleSinceHours}`,
+      );
     }
     if (input.limit !== undefined && input.limit > deps.config.maxWhaleResults) {
-      throw new Error(`limit exceeds configured maximum ${deps.config.maxWhaleResults}`);
+      throw new DataToolError(
+        "CONFIGURED_LIMIT_EXCEEDED",
+        `limit exceeds configured maximum ${deps.config.maxWhaleResults}`,
+      );
     }
     const chainId = input.chain ?? deps.config.defaultChainId;
     const token = input.ticker ? deps.tokenRegistry.resolve(chainId, input.ticker) : undefined;

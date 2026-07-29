@@ -137,6 +137,7 @@ async function main() {
       tier: definition.tier,
       price: pricing[definition.name] ?? null,
       surfaces: [...definition.surfaces],
+      errorCodes: [...definition.errorCodes],
       availability,
       gates:
         availability === "implemented-but-live-gated"
@@ -159,7 +160,7 @@ async function main() {
     scripts: Record<string, string>;
     version: string;
   };
-  for (const command of ["site:data", "site:dev", "site:build", "site:check"]) {
+  for (const command of ["site:data", "site:dev", "site:build", "site:check", "site:lighthouse"]) {
     if (!packageJson.scripts[command]) {
       throw new Error(`root package.json is missing ${command}`);
     }

@@ -59,55 +59,63 @@ export class RobinhoodFallbackOracleAdapter implements OraclePort {
     tokenAddress: string;
   }): Promise<OraclePrice> {
     await this.sequencerGate(input.chainId);
-    const fetchedAt = this.now();
-    const [prices, assets] = await Promise.all([
-      this.getJson(`https://api.robinhood.com/rhj/prices/${input.ticker}`),
-      this.getJson("https://api.robinhood.com/rhj/assets"),
-    ]);
-    const quote = pricesSchema
-      .parse(prices)
-      .quotes.find(
-        (item) =>
-          item.tokenSymbol.toUpperCase() === input.ticker.toUpperCase() &&
-          hasDeployment(item.deployments, input),
-      );
-    const asset = assetsSchema
-      .parse(assets)
-      .assets.find(
-        (item) =>
-          item.tokenSymbol.toUpperCase() === input.ticker.toUpperCase() &&
-          hasDeployment(item.deployments, input),
-      );
-    if (!quote || !asset) {
-      throw new Error(`Robinhood fallback data is incomplete for ${input.ticker}`);
-    }
-    if (quote.isTradingHalt) {
-      throw new OracleSafetyError("ORACLE_PAUSED", "Robinhood fallback reports a trading halt");
-    }
-    const generatedAt = new Date(quote.generatedAt);
-    const ageSeconds = (fetchedAt.getTime() - generatedAt.getTime()) / 1_000;
-    if (
-      !Number.isFinite(this.maxAgeSeconds) ||
-      this.maxAgeSeconds <= 0 ||
-      ageSeconds < 0 ||
-      ageSeconds > this.maxAgeSeconds
-    ) {
-      throw new OracleSafetyError("STALE_ORACLE_ROUND", "Robinhood fallback quote is stale");
-    }
+    try {
+      const fetchedAt = this.now();
+      const [prices, assets] = await Promise.all([
+        this.getJson(`https://api.robinhood.com/rhj/prices/${input.ticker}`),
+        this.getJson("https://api.robinhood.com/rhj/assets"),
+      ]);
+      const quote = pricesSchema
+        .parse(prices)
+        .quotes.find(
+          (item) =>
+            item.tokenSymbol.toUpperCase() === input.ticker.toUpperCase() &&
+            hasDeployment(item.deployments, input),
+        );
+      const asset = assetsSchema
+        .parse(assets)
+        .assets.find(
+          (item) =>
+            item.tokenSymbol.toUpperCase() === input.ticker.toUpperCase() &&
+            hasDeployment(item.deployments, input),
+        );
+      if (!quote || !asset) {
+        throw new Error(`Robinhood fallback data is incomplete for ${input.ticker}`);
+      }
+      if (quote.isTradingHalt) {
+        throw new OracleSafetyError("ORACLE_PAUSED", "Robinhood fallback reports a trading halt");
+      }
+      const generatedAt = new Date(quote.generatedAt);
+      const ageSeconds = (fetchedAt.getTime() - generatedAt.getTime()) / 1_000;
+      if (
+        !Number.isFinite(this.maxAgeSeconds) ||
+        this.maxAgeSeconds <= 0 ||
+        ageSeconds < 0 ||
+        ageSeconds > this.maxAgeSeconds
+      ) {
+        throw new OracleSafetyError("STALE_ORACLE_ROUND", "Robinhood fallback quote is stale");
+      }
 
-    const midpoint = decimalMidpoint(quote.bid, quote.ask);
-    const tokenPrice = decimalMultiply(midpoint, asset.currentMultiplier);
-    return {
-      chainId: input.chainId,
-      priceUsd: decimalToNumber(tokenPrice),
-      oracleSource: "fallback",
-      oracleUpdatedAt: quote.generatedAt,
-      provider: "robinhood-rhj",
-      multiplier: asset.currentMultiplier,
-      multiplierUpdatedAt: fetchedAt.toISOString(),
-      oraclePaused: false,
-      sequencerOk: true,
-    };
+      const midpoint = decimalMidpoint(quote.bid, quote.ask);
+      const tokenPrice = decimalMultiply(midpoint, asset.currentMultiplier);
+      return {
+        chainId: input.chainId,
+        priceUsd: decimalToNumber(tokenPrice),
+        oracleSource: "fallback",
+        oracleUpdatedAt: quote.generatedAt,
+        provider: "robinhood-rhj",
+        multiplier: asset.currentMultiplier,
+        multiplierUpdatedAt: fetchedAt.toISOString(),
+        oraclePaused: false,
+        sequencerOk: true,
+      };
+    } catch (error) {
+      if (error instanceof OracleSafetyError) throw error;
+      throw new OracleSafetyError(
+        "ORACLE_SOURCE_UNAVAILABLE",
+        `Robinhood reference source is unavailable for ${input.ticker}`,
+      );
+    }
   }
 
   private async getJson(url: string): Promise<unknown> {

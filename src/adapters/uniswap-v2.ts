@@ -104,7 +104,7 @@ export class UniswapV2Adapter implements DexPort {
         const rawMetrics = calculateV2PoolMetrics({
           reserveToken: tokenIsToken0 ? state.reserve0 : state.reserve1,
           reserveQuote: tokenIsToken0 ? state.reserve1 : state.reserve0,
-          tokenDecimals: 18,
+          tokenDecimals: pool.tokenDecimals,
           quoteDecimals: pool.quoteAsset.decimals,
           depthPct: input.depthPct,
         });
@@ -180,14 +180,14 @@ export class UniswapV2Adapter implements DexPort {
     const amountIn =
       input.side === "buy"
         ? toUnits(input.amountUsd / quotePrice.priceUsd, pool.quoteAsset.decimals)
-        : toUnits(tokenAmount!, 18);
+        : toUnits(tokenAmount!, pool.tokenDecimals);
     const reserveIn = input.side === "buy" ? reserveQuote : reserveToken;
     const reserveOut = input.side === "buy" ? reserveToken : reserveQuote;
     const amountInWithFee = amountIn * 997n;
     const amountOut = (amountInWithFee * reserveOut) / (reserveIn * 1_000n + amountInWithFee);
     const effectivePriceUsd =
       input.side === "buy"
-        ? input.amountUsd / fromUnits(amountOut, 18)
+        ? input.amountUsd / fromUnits(amountOut, pool.tokenDecimals)
         : (fromUnits(amountOut, pool.quoteAsset.decimals) * quotePrice.priceUsd) / tokenAmount!;
     return {
       chainId: input.chainId,

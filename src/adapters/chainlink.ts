@@ -1,6 +1,11 @@
 import { getAddress, type PublicClient } from "viem";
 import { aggregatorV3Abi } from "../chain/abi";
-import { assertSequencerUsable, validateOracleRound, type SequencerRound } from "../core/oracle";
+import {
+  assertSequencerUsable,
+  OracleSafetyError,
+  validateOracleRound,
+  type SequencerRound,
+} from "../core/oracle";
 import type { OraclePort, OraclePrice } from "../core/ports";
 import { decimalToNumber } from "../core/decimal";
 import type { ChainRegistry } from "../registry/chains";
@@ -89,7 +94,8 @@ export class ChainlinkOracleAdapter implements OraclePort {
     if (!oracle.requiresSequencerUptime) {
       return true;
     }
-    if (!oracle.sequencerUptimeFeed) {
+    const sequencerFeed = oracle.sequencerUptimeFeed;
+    if (!sequencerFeed) {
       return assertSequencerUsable({
         required: true,
         round: undefined,
@@ -105,7 +111,9 @@ export class ChainlinkOracleAdapter implements OraclePort {
         now: this.now,
       });
     }
-    const round = await this.reader.readSequencerRound(chainId, oracle.sequencerUptimeFeed);
+    const round = await readOracleSource("sequencer status source is unavailable", () =>
+      this.reader.readSequencerRound(chainId, sequencerFeed),
+    );
     return assertSequencerUsable({
       required: true,
       round,
@@ -123,9 +131,16 @@ export class ChainlinkOracleAdapter implements OraclePort {
   }): Promise<OraclePrice> {
     await this.assertChainSequencerUsable(input.chainId);
     if (!input.feed || input.feedHeartbeatSeconds === undefined) {
-      throw new Error(`no Chainlink feed configured for ${input.ticker}`);
+      throw new OracleSafetyError(
+        "ORACLE_SOURCE_UNAVAILABLE",
+        `no reference oracle is configured for ${input.ticker}`,
+      );
     }
-    const round = await this.reader.readRound(input.chainId, input.feed);
+    const feed = input.feed;
+    const round = await readOracleSource(
+      `Chainlink reference source is unavailable for ${input.ticker}`,
+      () => this.reader.readRound(input.chainId, feed),
+    );
     const validated = validateOracleRound({
       chainId: input.chainId,
       feedAddress: input.feed,
@@ -144,5 +159,14 @@ export class ChainlinkOracleAdapter implements OraclePort {
       oraclePaused: false,
       sequencerOk: true,
     };
+  }
+}
+
+async function readOracleSource<T>(message: string, read: () => Promise<T>): Promise<T> {
+  try {
+    return await read();
+  } catch (error) {
+    if (error instanceof OracleSafetyError) throw error;
+    throw new OracleSafetyError("ORACLE_SOURCE_UNAVAILABLE", message);
   }
 }

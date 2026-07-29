@@ -83,10 +83,19 @@ curl --fail-with-body \\
     <pre tabindex="0"><code>{JSON.stringify(tool.outputSchema, null, 2)}</code></pre>
   </div>
   <h2>Errors and limits</h2>
-  <p>
-    Invalid inputs fail schema validation. Runtime work stays deployment-bounded. Price-bearing
-    reads fail closed when oracle, liveness, or verified-pool requirements are unavailable;
-    scanner-backed reads also report scanner unavailability.
-  </p>
+  <p>Invalid inputs fail schema validation. Runtime work stays deployment-bounded.</p>
+  {
+    tool.errorCodes.length > 0 ? (
+      <ul>
+        {tool.errorCodes.map((code) => (
+          <li>
+            <code>{code}</code>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <p>This tool declares no availability-specific runtime errors.</p>
+    )
+  }
   <p><a href={path("/docs/troubleshooting/")}>Match typed errors to corrective steps</a></p>
 </DocLayout>

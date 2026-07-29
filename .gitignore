@@ -11,3 +11,4 @@ dist/
 coverage/
 site/.astro/
 site/src/generated/*.json
+.lighthouseci/
